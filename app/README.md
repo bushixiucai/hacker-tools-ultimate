@@ -108,7 +108,7 @@ npm run test:e2e          # build + check:dist-no-gags + E2E；再 build:gags + 
 
 ## M11 一键神功
 
-数据：`../scripts/gags/*.json`（目前为文案组的 `gags.json`）。**构建期开关**：只有 `VITE_GAGS=1` 构建（`npm run build:gags` → `dist-gags/`）才会把数据打进包；默认 `npm run build` 中该动态 import 被摇掉，`dist/` 里不含任何按钮文案（`npm run check:dist-no-gags` 校验）。审核通过后在 Cloudflare Pages 环境变量里设 `VITE_GAGS=1` 即上线。分类显示名在 `src/gags.categories.ts`（PM 定：网站奇遇/人生破解/比赛外挂/信号玄机/机器驯服/赛博求签），gags.json 内的显示名一律忽略。
+数据：`../scripts/gags/*.json`（目前为文案组的 `gags.json`）。**构建期开关**：只有 `VITE_GAGS=1` 构建（`npm run build:gags` → `dist-gags/`）才会把数据打进包；默认 `npm run build` 中该动态 import 被摇掉，`dist/` 里不含任何按钮文案（`npm run check:dist-no-gags` 校验）。审核通过后在 Cloudflare Pages 环境变量里设 `VITE_GAGS=1` 即上线。分类显示名在 `src/gags.categories.ts`（PM 定：网站魔法/拆解实验室/夺旗练习场/空中信号站/铁盒子们/玄学办公室），gags.json 内的显示名一律忽略。
 
 ```json
 { "id": "site-01", "category": "site", "label": "一键……", "duration": 4, "stall": 88, "twist": "一句话反转", "logs": ["可选假日志 1", "2", "3"], "steps": [ /* 可选：完整内部步骤，优先于自动生成 */ ] }
