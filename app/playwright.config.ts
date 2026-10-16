@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-const PORT = 4321;
+const PORT = Number(process.env.E2E_PORT ?? 4321); // 并行跑多个 E2E 时用 E2E_PORT 区分
 export default defineConfig({
   testDir: 'e2e',
   timeout: 120_000,
