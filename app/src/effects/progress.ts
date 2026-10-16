@@ -1,5 +1,5 @@
 import { el, sfx, sleep } from './util';
-export interface ProgressOpts { from?: number; to?: number; stuckAt?: number; stuckMs?: number; keepMs?: number }
+export interface ProgressOpts { from?: number; to?: number; stuckAt?: number; stuckMs?: number; keepMs?: number; /** false：卡住后保持在 stuckAt，不跳到 100% */ finish?: boolean }
 /** 假进度条：durationMs 内从 from 涨到 to（默认 0→100），可在 stuckAt 处“卡住” stuckMs */
 export function progressBar(container: HTMLElement, label: string, durationMs: number, o: ProgressOpts = {}): Promise<void> {
   const from = o.from ?? 0, to = o.to ?? 100;
@@ -17,7 +17,7 @@ export function progressBar(container: HTMLElement, label: string, durationMs: n
       if (t < 1) { requestAnimationFrame(() => void step()); return; }
       if (o.stuckAt !== undefined && o.stuckMs) {
         show(o.stuckAt); txt.textContent += '  (卡住了…)'; await sleep(o.stuckMs);
-        if (o.stuckAt >= to) { show(100, true); }
+        if (o.stuckAt >= to && o.finish !== false) { show(100, true); }
       }
       sfx('ding'); setTimeout(() => wrap.remove(), o.keepMs ?? 4000); resolve();
     };

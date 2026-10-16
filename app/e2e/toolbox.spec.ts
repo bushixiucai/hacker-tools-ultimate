@@ -271,3 +271,20 @@ test('音效：默认开启，用户手势后发声；静音开关生效并持�
   await expect(body).toHaveAttribute('data-sound', 'off');
   expectClean(g);
 });
+
+// ---- M11 一键神功：默认构建中不存在（完整用例见 e2e-gags/，针对 VITE_GAGS=1 构建）----
+test('一键神功：默认构建不含宫格', async ({ page }) => {
+  const g = await guard(page); await acceptDisclaimerUpfront(page);
+  await page.goto('/#gags-preview');
+  await expect(page.locator('#view-home .hero')).toBeVisible();
+  await expect(page.locator('#gags')).toHaveCount(0);
+  await expect(page.locator('.gag-btn')).toHaveCount(0);
+  expect(g.requests.some((u) => /gagsData/.test(u))).toBe(false);
+  expectClean(g);
+});
+
+test('关于页：纯文字致谢灵感来源（无链接）', async ({ page }) => {
+  await acceptDisclaimerUpfront(page); await page.goto('/#/about');
+  await expect(page.locator('#credits')).toContainText('GodOfHacker');
+  await expect(page.locator('#credits a')).toHaveCount(0);
+});

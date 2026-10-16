@@ -5,7 +5,7 @@ export type Step =
   | { type: 'type'; text: string; kind?: LineKind; speed?: number }
   | { type: 'log'; lines: string[]; kind?: LineKind; delay?: Range; repeat?: number; shuffle?: boolean }
   | { type: 'progress'; label: string | string[]; duration: number;
-      from?: number; to?: number; stuckAt?: number; stuckMs?: number;
+      from?: number; to?: number; stuckAt?: number; stuckMs?: number; finish?: boolean;
       /** true：不阻塞后续步骤（时间轴格式用），reveal 前会等待其完成 */ async?: boolean }
   | { type: 'popup'; title: string; sub?: string; ms?: number }
   | { type: 'delay'; ms: number | Range }

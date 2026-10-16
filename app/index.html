@@ -24,8 +24,20 @@
     </header>
 
     <section id="view-home" class="view page" aria-label="模块宫格">
-      <p class="lead">选一个"黑客工具"开始表演（全部为本地动画，不会碰任何真实目标）。</p>
+      <div class="hero">
+        <div class="hero-title">全银河系第 9527 名的黑客工作站（自评）</div>
+        <ul class="hero-points">
+          <li>自研「意念驱动」内核：0 行真代码，100% 纯手工假动画</li>
+          <li>启动速度快到光都要排队；进度条精确到小数点后 0 位</li>
+          <li>累计帮助 0 位用户入侵 0 台服务器，好评率 100%（样本：作者本人）</li>
+        </ul>
+        <p class="lead">选一个"黑客工具"开始表演 —— 全部为本地动画，不会碰任何真实目标。</p>
+      </div>
       <div id="cards" class="cards"></div>
+      <section id="gags" class="gags hidden" aria-label="一键神功">
+        <h2 class="gags-title">M11 · 一键神功 <span class="dim">（点一下，跑几秒，然后反转）</span></h2>
+        <div id="gag-groups"></div>
+      </section>
     </section>
 
     <div id="view-tool" class="view grid hidden">
@@ -46,6 +58,8 @@
         <li>设置（主题、音效、免责声明已读）只存在本机 localStorage，可随时一键清除。</li>
         <li>请勿用于欺骗、恐吓他人或违法用途；整蛊请适度，玩完告诉对方这是假的。</li>
       </ul>
+      <h3>致谢</h3>
+      <p id="credits">首页「一键神功」按钮墙的创意受开源项目 GodOfHacker（作者 WWILLV）启发。本项目仅借鉴创意，未使用其任何代码、图片或文案；所有按钮名、梗与分类名均为原创。项目仓库：bushixiucai/hacker-tools-ultimate。</p>
       <p><button type="button" id="reset-settings">清除本地设置</button> <span id="reset-msg" class="dim"></span></p>
       <footer class="sponsor-row">
         <!-- 赞助外链（PRD §2.10）：仅允许普通 <a href>，须带 target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"；链接待定时保留无 href 占位 -->

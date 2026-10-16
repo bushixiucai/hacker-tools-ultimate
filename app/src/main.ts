@@ -8,6 +8,7 @@ import { onFullscreenChange, toggleFullscreen } from './ui/fullscreen';
 import { parseRoute, replaceHash, showView } from './ui/router';
 import { CameraModule } from './modules/camera';
 import { BUILTIN_EGGS } from './eggs.builtin';
+import { loadGags, renderGags, gagIds, runGag } from './ui/gags';
 import { decodeReveal, encodeReveal, renderReveal } from './ui/reveal';
 import { SCRIPTS, UNPARSED_EGGS, fakeIp, fill, runScenario, type ScenarioScript, type Vars } from './scenario';
 
@@ -158,6 +159,15 @@ for (const sc of SCRIPTS) {
   c.onclick = () => { location.hash = `#/tool/${encodeURIComponent(sc.id)}`; };
   cards.append(c);
 }
+// M11 一键神功（构建期开关 VITE_GAGS=1，见 ui/gags.ts）
+void loadGags().then((d) => {
+  renderGags();
+  if (d) term.register({ name: 'gag', hidden: true, usage: 'gag <id>', description: '运行一键神功', run: ({ args, term: t }) => {
+    if (!gagIds().includes(args[0])) return t.print(`未知神功：${args[0] ?? ''}`, 'err');
+    return runGag(args[0]);
+  } });
+});
+
 // 关于页：一键清除本地设置（R10）
 document.querySelector<HTMLButtonElement>('#reset-settings')!.onclick = () => {
   Object.keys(localStorage).filter((k) => k.startsWith('htb.')).forEach((k) => localStorage.removeItem(k));

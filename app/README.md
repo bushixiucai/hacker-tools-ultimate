@@ -42,7 +42,7 @@ npm run build             # = check:no-network + check:scripts + tsc + vite buil
 npm run preview           # 预览 dist
 npm run check:names       # PRD §2.9 命名 lint（真实 CVE / 字典名 / 组织名 / 工具名）
 npm run check             # 三项检查合集
-npm run test:e2e          # build + Playwright E2E（首次需 npx playwright install chromium）
+npm run test:e2e          # build + check:dist-no-gags + E2E；再 build:gags + 一键神功 E2E（首次需 npx playwright install chromium）
 ```
 
 ## 添加一个脚本
@@ -105,6 +105,25 @@ npm run test:e2e          # build + Playwright E2E（首次需 npx playwright in
 - **主题**（G3）：标题下「绿 / 紫 / 红」按钮或 `theme [matrix|cyber|alert]`；CSS 变量驱动，代码雨与地图同步换色；记入 `localStorage['htb.theme']`。
 - **音效**（G4）：WebAudio 本地合成（打字、进度完成、警报、揭晓鼓点），无音频文件；按 PRD §6.2 默认开、音量 40%，首次用户手势后才发声；「🔊/🔇」按钮或 `mute` 命令切换，记入 `localStorage['htb.muted']`。
 - **页面**：`#/` 首页宫格（7 个剧本卡片，整蛊类带标签）· `#/tool[/<id>][?target=]` 终端 · `#/about` 关于（赞助占位）· `#/reveal/<base64url>` 揭晓页（可分享，内容仅以文本渲染）。
+
+## M11 一键神功
+
+数据：`../scripts/gags/*.json`（目前为文案组的 `gags.json`）。**构建期开关**：只有 `VITE_GAGS=1` 构建（`npm run build:gags` → `dist-gags/`）才会把数据打进包；默认 `npm run build` 中该动态 import 被摇掉，`dist/` 里不含任何按钮文案（`npm run check:dist-no-gags` 校验）。审核通过后在 Cloudflare Pages 环境变量里设 `VITE_GAGS=1` 即上线。分类显示名在 `src/gags.categories.ts`（PM 定：网站奇遇/人生破解/比赛外挂/信号玄机/机器驯服/赛博求签），gags.json 内的显示名一律忽略。
+
+```json
+{ "id": "site-01", "category": "site", "label": "一键……", "duration": 4, "stall": 88, "twist": "一句话反转", "logs": ["可选假日志 1", "2", "3"], "steps": [ /* 可选：完整内部步骤，优先于自动生成 */ ] }
+```
+
+| 字段 | 规则（`check:scripts` 校验） |
+|---|---|
+| `id` | 必填，小写字母/数字/连字符，全局唯一 |
+| `category` | 必填，`site` \| `crack` \| `ctf` \| `wireless` \| `hardware` \| `mystic`；显示名在 `src/gags.categories.ts`（唯一配置处，可直接改名） |
+| `label` / `twist` | 必填，非空 |
+| `duration` | 必填，3–5（秒） |
+| `stall` | 可选，两位数整数 10–99：进度条在该百分比卡顿一下再走完；缺省不卡 |
+| `logs` / `steps` | 可选；无 `steps` 时自动生成：日志在 duration 内打出 + 进度条卡在 stall → 一句话反转弹窗 |
+
+文本同样经过 `check:names`。
 
 ## 零网络保障
 

@@ -32,7 +32,7 @@ export async function runScenario(s: ScenarioScript, env: RunnerEnv, vars: Vars)
       }
       case 'progress': {
         const labels = Array.isArray(st.label) ? st.label : [st.label];
-        const o = { from: st.from, to: st.to, stuckAt: st.stuckAt, stuckMs: st.stuckMs !== undefined ? st.stuckMs * k : undefined };
+        const o = { from: st.from, to: st.to, stuckAt: st.stuckAt, stuckMs: st.stuckMs !== undefined ? st.stuckMs * k : undefined, finish: st.finish };
         const p = Promise.all(labels.map((l) => progressBar(env.barsEl, fill(l, vars), st.duration * k, o))).then(() => undefined);
         if (st.async) pending.push(p); else await p;
         return;
