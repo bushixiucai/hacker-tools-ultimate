@@ -102,6 +102,10 @@ npm run test:e2e          # build + Playwright E2E（首次需 npx playwright in
 - **彩蛋 click**：`match` 必须指明目标元素（页面 `[data-egg]` 值），缺失即构建失败，绝不默认为 logo。现有目标：`logo`、`night-vision`、`record`、`close-prank`。内置彩蛋（`src/eggs.builtin.ts`）：`night-vision` ×3、`record` ×1，剧本若定义同一目标则以剧本为准。
 - **M4 摄像头**：`camera-takeover` 运行时右侧换成 Canvas 生成的假监控网格（橘猫 + OSD，标注 FAKE），控制条：云台 ◀▶、「🌙 夜视 3x」、「🎙 录音」，右上「✕ 关闭整蛊」/ Esc / 双击画面 → 立即进入揭晓。绝不调用真实摄像头或请求权限。
 
+- **主题**（G3）：标题下「绿 / 紫 / 红」按钮或 `theme [matrix|cyber|alert]`；CSS 变量驱动，代码雨与地图同步换色；记入 `localStorage['htb.theme']`。
+- **音效**（G4）：WebAudio 本地合成（打字、进度完成、警报、揭晓鼓点），无音频文件；按 PRD §6.2 默认开、音量 40%，首次用户手势后才发声；「🔊/🔇」按钮或 `mute` 命令切换，记入 `localStorage['htb.muted']`。
+- **页面**：`#/` 首页宫格（7 个剧本卡片，整蛊类带标签）· `#/tool[/<id>][?target=]` 终端 · `#/about` 关于（赞助占位）· `#/reveal/<base64url>` 揭晓页（可分享，内容仅以文本渲染）。
+
 ## 零网络保障
 
 1. `index.html` CSP meta：`default-src 'self'; connect-src 'none'; …`

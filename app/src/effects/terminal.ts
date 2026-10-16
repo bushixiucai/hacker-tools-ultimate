@@ -1,4 +1,4 @@
-import { el } from './util';
+import { el, sfx } from './util';
 import { typewrite } from './typewriter';
 export type LineKind = '' | 'ok' | 'warn' | 'err' | 'dim';
 export interface CommandCtx { args: string[]; raw: string; term: Terminal }
@@ -25,7 +25,7 @@ export class Terminal {
   private scroll = () => { this.out.scrollTop = this.out.scrollHeight; };
   line(kind: LineKind = '') { const d = el('div', kind); this.out.append(d); this.trim(); this.scroll(); return d; }
   print(text: string, kind: LineKind = '') { this.line(kind).textContent = text; }
-  async type(text: string, kind: LineKind = '', speed = 14) { await typewrite(this.line(kind), text, speed, this.scroll); }
+  async type(text: string, kind: LineKind = '', speed = 14) { await typewrite(this.line(kind), text, speed, () => { this.scroll(); sfx('key'); }); }
   clear() { this.out.replaceChildren(); }
   async exec(raw: string) {
     const s = raw.trim(); if (!s || this.busy) return;

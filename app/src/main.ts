@@ -1,4 +1,7 @@
 import './style.css';
+import { initTheme, setTheme, currentTheme, isTheme, THEMES, type Theme } from './ui/theme';
+import { initSound, isMuted, setMuted } from './ui/sound';
+initTheme(); initSound();
 import { Terminal, WorldMap, startCodeRain, type LineKind } from './effects';
 import { showDisclaimer } from './ui/disclaimer';
 import { onFullscreenChange, toggleFullscreen } from './ui/fullscreen';
@@ -31,6 +34,15 @@ term.register(
     t.print('[i] 实际上什么都没追踪，全是随机生成的 :)', 'warn');
   } },
   { name: 'fullscreen', description: '切换全屏（Esc 退出）', run: () => toggleFullscreen() },
+  { name: 'theme', usage: 'theme [matrix|cyber|alert]', description: '切换主题（Matrix 绿 / 赛博紫粉 / 红黑警报）', run: ({ args, term: t }) => {
+    const order = Object.keys(THEMES) as Theme[];
+    const next = args[0] ?? order[(order.indexOf(currentTheme()) + 1) % order.length];
+    if (!isTheme(next)) return t.print(`未知主题：${next}。可选：${order.join(' / ')}`, 'err');
+    setTheme(next); t.print(`[*] 已切换到「${THEMES[next]}」次元。`, 'ok');
+  } },
+  { name: 'mute', usage: 'mute [on|off]', description: '静音开关（音效为本地合成）', run: ({ args, term: t }) => {
+    setMuted(args[0] ? args[0] !== 'off' : !isMuted()); t.print(isMuted() ? '[i] 已静音。' : '[i] 音效已开启（40%）。', 'dim');
+  } },
   { name: 'disclaimer', description: '查看免责声明', run: () => showDisclaimer(true, 0) },
   { name: 'eggs', hidden: true, description: '列出彩蛋（剧透）', run: ({ term: t }) => {
     allEggs.forEach((e) => t.print(`  [${e.script}] ${e.source}`, 'dim'));
@@ -106,6 +118,22 @@ for (const name of ['help', ...SCRIPTS.map((s) => s.id), 'trace', 'clear']) {
   quick.append(b);
 }
 panel.append(quick);
+
+// 设置：主题按钮 + 音效开关
+const slot = document.querySelector<HTMLElement>('#settings-slot')!;
+const themeBtns = (Object.keys(THEMES) as Theme[]).map((k) => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'mini theme-btn'; b.dataset.themeChoice = k;
+  b.textContent = { matrix: '绿', cyber: '紫', alert: '红' }[k]; b.title = `主题：${THEMES[k]}`; b.setAttribute('aria-label', `主题：${THEMES[k]}`);
+  b.onclick = (e) => { e.stopPropagation(); setTheme(k); }; slot.append(b); return b;
+});
+const soundBtn = document.createElement('button'); soundBtn.type = 'button'; soundBtn.className = 'mini'; soundBtn.id = 'sound-btn';
+soundBtn.onclick = (e) => { e.stopPropagation(); setMuted(!isMuted()); };
+slot.append(soundBtn);
+const syncSettings = () => {
+  themeBtns.forEach((b) => b.classList.toggle('on', b.dataset.themeChoice === currentTheme()));
+  soundBtn.textContent = isMuted() ? '🔇 静音' : '🔊 音效'; soundBtn.setAttribute('aria-pressed', String(!isMuted()));
+};
+addEventListener('htb:theme', syncSettings); addEventListener('htb:sound', syncSettings); syncSettings();
 
 // 全屏按钮 / 免责声明入口
 const fsBtn = document.querySelector<HTMLButtonElement>('#fs-btn')!;

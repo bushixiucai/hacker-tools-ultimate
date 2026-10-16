@@ -1,4 +1,4 @@
-import { el, pick, sleep } from './util';
+import { el, pick, sfx, sleep } from './util';
 export const DEFAULT_REVEALS = [
   '开玩笑的啦 😜 你刚刚“黑掉”的是……你自己的浏览器标签页。',
   '以上全部是本地生成的假数据，没有任何服务器受到伤害 🐹',
@@ -21,7 +21,7 @@ export async function glitchPopup(title: string, opts: PopupOpts = {}) {
   box.append(big, sub, btn); overlay.append(box); document.body.append(overlay);
   let revealed = false, done: () => void = () => {};
   const reveal = () => {
-    if (revealed) return; revealed = true;
+    if (revealed) return; revealed = true; sfx('reveal');
     const rt = opts.revealTitle ?? '你被骗啦 🤡'; big.textContent = rt; big.dataset.text = rt;
     sub.textContent = opts.reveal ?? pick(DEFAULT_REVEALS); btn.textContent = opts.button ?? '好吧，我被骗了'; btn.focus();
     if (document.body.dataset.autoDismiss) setTimeout(() => close(), 1500); // 仅自动化测试/录屏
@@ -41,6 +41,6 @@ export async function glitchPopup(title: string, opts: PopupOpts = {}) {
 export async function glitchFlash(title: string, sub = '', ms = 1400) {
   const overlay = el('div', 'popup'), box = el('div', 'box');
   const big = el('div', 'big glitch', title); big.dataset.text = title;
-  box.append(big, el('div', 'psub', sub)); overlay.append(box); document.body.append(overlay);
+  box.append(big, el('div', 'psub', sub)); overlay.append(box); document.body.append(overlay); sfx('alarm');
   await sleep(ms); overlay.remove();
 }

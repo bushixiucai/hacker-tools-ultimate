@@ -1,4 +1,4 @@
-import { el, rnd, sleep } from './util';
+import { cssVar, el, rnd, sleep } from './util';
 export interface City { name: string; x: number; y: number } // 归一化坐标 0..1
 // 粗略手绘大陆轮廓，本地绘制，无地图瓦片（PRD R2）
 const LANDS: [number, number][][] = [
@@ -18,32 +18,35 @@ export class WorldMap {
   private ctx: CanvasRenderingContext2D; private base: HTMLCanvasElement; private route: City[] = []; private prog = 0; private running = false;
   constructor(private canvas: HTMLCanvasElement, private hopsEl?: HTMLElement) {
     this.ctx = canvas.getContext('2d')!; this.base = this.renderBase(); this.loop();
+    addEventListener('htb:theme', () => { this.base = this.renderBase(); });
   }
   private renderBase() {
     const { width: W, height: H } = this.canvas, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const fgRgb = cssVar('--fg-rgb', '51,255,102'), dim = cssVar('--fg-dim', '#1a8033'), bg2 = cssVar('--bg2', '#000a00');
     const g = c.getContext('2d')!, m = document.createElement('canvas'); m.width = W; m.height = H; const mk = m.getContext('2d')!;
     mk.fillStyle = '#fff';
     for (const l of LANDS) { mk.beginPath(); l.forEach(([x, y], i) => (i ? mk.lineTo(x * W, y * H) : mk.moveTo(x * W, y * H))); mk.closePath(); mk.fill(); }
     const d = mk.getImageData(0, 0, W, H).data;
-    g.fillStyle = '#000a00'; g.fillRect(0, 0, W, H); g.strokeStyle = 'rgba(51,255,102,.08)';
+    g.fillStyle = bg2; g.fillRect(0, 0, W, H); g.strokeStyle = `rgba(${fgRgb},.08)`;
     for (let x = 0; x < W; x += 40) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
     for (let y = 0; y < H; y += 40) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
-    g.fillStyle = '#1a8033';
+    g.fillStyle = dim;
     for (let y = 2; y < H; y += 6) for (let x = 2; x < W; x += 6) if (d[(y * W + x) * 4]) g.fillRect(x, y, 3, 3);
     return c;
   }
   private loop = () => {
     const g = this.ctx, { width: W, height: H } = this.canvas, t = performance.now() / 300;
+    const fg = cssVar('--fg', '#33ff66'), fgRgb = cssVar('--fg-rgb', '51,255,102'), hi = cssVar('--fg-hi', '#aaffcc'), acc = cssVar('--accent', '#ff4466');
     g.drawImage(this.base, 0, 0);
     this.route.forEach((c, i) => {
-      const x = c.x * W, y = c.y * H; g.fillStyle = '#33ff66'; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill();
-      if (i <= this.prog) { g.strokeStyle = `rgba(51,255,102,${0.4 + 0.3 * Math.sin(t + i)})`; g.beginPath(); g.arc(x, y, 6 + 4 * Math.sin(t + i), 0, 7); g.stroke();
-        g.fillStyle = '#aaffcc'; g.font = '11px monospace'; g.fillText(c.name, x + 6, y - 6); }
+      const x = c.x * W, y = c.y * H; g.fillStyle = fg; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill();
+      if (i <= this.prog) { g.strokeStyle = `rgba(${fgRgb},${0.4 + 0.3 * Math.sin(t + i)})`; g.beginPath(); g.arc(x, y, 6 + 4 * Math.sin(t + i), 0, 7); g.stroke();
+        g.fillStyle = hi; g.font = '11px monospace'; g.fillText(c.name, x + 6, y - 6); }
     });
     for (let i = 0; i < this.route.length - 1; i++) {
       const seg = Math.min(1, Math.max(0, this.prog - i)); if (seg <= 0) break;
       const a = this.route[i], b = this.route[i + 1], ax = a.x * W, ay = a.y * H, bx = b.x * W, by = b.y * H, cx = (ax + bx) / 2, cy = Math.min(ay, by) - 50;
-      g.strokeStyle = '#ff4466'; g.lineWidth = 2; g.setLineDash([6, 4]); g.lineDashOffset = -t * 4; g.beginPath(); g.moveTo(ax, ay);
+      g.strokeStyle = acc; g.lineWidth = 2; g.setLineDash([6, 4]); g.lineDashOffset = -t * 4; g.beginPath(); g.moveTo(ax, ay);
       for (let s = 0; s <= seg; s += 0.02) { const u = 1 - s; g.lineTo(u * u * ax + 2 * u * s * cx + s * s * bx, u * u * ay + 2 * u * s * cy + s * s * by); }
       g.stroke(); g.setLineDash([]); g.lineWidth = 1;
     }
