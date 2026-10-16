@@ -15,7 +15,8 @@ const BLOCK = [
   // 真实黑客组织
   'Anonymous', 'Lazarus', 'APT ?\\d+', 'Fancy Bear', 'Cozy Bear', 'LulzSec', 'Lapsus\\$?',
   // 真实安全工具
-  'Metasploit', 'nmap', 'sqlmap', 'Hydra', 'John the Ripper', 'hashcat', 'aircrack(-ng)?', 'Burp ?Suite', 'Cobalt ?Strike', 'Mimikatz', 'Shodan', 'Kali', 'Wireshark',
+  // 白名单（老大拍板 2026-10-17）：nmap、sqlmap、hydra、Metasploit/msfconsole、aircrack-ng、Kali 允许作界面显示名
+  'John the Ripper', 'hashcat', 'Burp ?Suite', 'Cobalt ?Strike', 'Mimikatz', 'Shodan', 'Wireshark',
 ];
 // 机构 / 公司名大小写敏感，避免误伤 <meta>、import.meta 等代码
 const BLOCK_CS = [

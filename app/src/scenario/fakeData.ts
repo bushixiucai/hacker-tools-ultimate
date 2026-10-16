@@ -1,7 +1,7 @@
 import { pick, rnd } from '../effects';
 import { CITIES } from '../effects/worldMap';
 // PRD R13：IP 仅用文档/保留段；R8/R9：CVE 一律虚构年份
-const DOC_NETS = ['192.0.2', '198.51.100', '203.0.113', '10.0.' + rnd(0, 255)];
+const DOC_NETS = ['192.0.2', '198.51.100', '203.0.113'];
 export const fakeIp = () => `${pick(DOC_NETS)}.${rnd(1, 254)}`;
 export const hex = (n: number) => Array.from({ length: n }, () => '0123456789abcdef'[rnd(0, 15)]).join('');
 const PASSWORDS = ['123456', 'password', 'iloveyou', 'qwerty', 'admin', 'letmein', '密码123', 'iloveyou_mom', 'woaini1314'];
