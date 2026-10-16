@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v0.3（总负责人拍板决议落地，取代 v0.2） |
+| 文档版本 | v0.4（新增「一键神功」按钮墙，取代 v0.3） |
 | 工作名 | `hacker-toolbox-prank`（正式品牌名与域名待定） |
 | 日期 | 2026-10-17 |
 | 负责人 | Tiger |
@@ -23,6 +23,7 @@
 | v0.1 | 2026-10-17 | 初稿（MVP 4 个模块） |
 | v0.2 | 2026-10-17 | ① 明确第一版纯前端 + Cloudflare Pages 部署；② MVP 扩至 10 个假工具模块，新增摄像头接管、卫星追踪、勒索弹窗整蛊等必含模块；③ 每个模块补齐交互流程、优先级与结尾反转；④ 关闭已决议的开放问题 |
 | v0.3 | 2026-10-17 | 总负责人拍板：① 9:16 竖屏导出进 P1（新增 G9）；② 勒索弹窗默认温和，电影级为可选开关，任何模式可一键关闭、不劫持浏览器；③ v1 不做任何统计，保持零请求；④ 赞助仅用普通 `<a>` 外链，不嵌第三方脚本/图片；⑤ 暂用工作名 `hacker-toolbox-prank`，品牌名/域名待定；⑥ 新增 §2.9 命名规则（用户自填目标、剧本恶搞名、CVE-2077-xxxx）与彩蛋结构化写法 `{trigger, match, output}`；开放问题收敛为 1 条 |
+| v0.4 | 2026-10-17 | 新增 M11「一键神功」按钮墙（首页：7 张正式剧本大卡片 + 六大类小按钮宫格），灵感来源 GodOfHacker（WWILLV）仅借创意、不借代码/图片、不照搬文案；首页改用原创夸张软件介绍风；按钮点击跑 3–5s 假进度 + 一句话反转（自有卡 99% 梗，stall 可填任意两位数）；第一批 20 个按钮 P0、扩到 40+ 为 P1；按钮字段 `{id, category, label, duration, stall?, twist, logs?, steps?}`，category 枚举 site/crack/ctf/wireless/hardware/mystic 但页面显示分类名自拟；新增审核红线（禁隐私/偷窥/骚扰/低俗/财产犯罪暗示、禁任何真实外链或请求、禁与原作雷同或近似改写，测试逐条比对）；「关于」页纯文字致谢灵感来源 |
 
 ---
 
@@ -75,7 +76,7 @@
 
 ### 2.4 不用真实漏洞名误导
 - **R8**：禁止真实 CVE 编号、真实漏洞名（Heartbleed、Log4Shell、EternalBlue 等）、真实恶意软件 / 勒索家族名、真实黑客组织名。
-- **R9**：使用明显虚构名：`CVE-2077-xxxx` 格式（如 `CVE-2077-0520`、`CVE-2077-1145`）、"薛定谔溢出漏洞""午睡提权漏洞""奶茶注入（MilkTea Injection）"。
+- **R9**：使用明显虚构名：漏洞编号统一 `CVE-2077-` + 4 位数字（如 `CVE-2077-0520`、`CVE-2077-1145`）、"薛定谔溢出漏洞""午睡提权漏洞""奶茶注入（MilkTea Injection）"。
 
 ### 2.5 不收集用户数据
 - **R10**：无后端、无埋点、无 Cookie、无指纹；设置项（音效、主题）仅存 `localStorage`，可一键清除。
@@ -118,10 +119,10 @@
 | 剧本写死的机构名 / 公司名 / 组织名 | 一律改为**恶搞名** | "桃宝网""谷鸽 Gugle""企鹅帝国""宇宙第一摸鱼集团""404 黑客联盟（虚构）" |
 | 字典 / 词表文件名 | 一律改为**恶搞名**，不得使用真实泄露字典名 | `rockyou` → `rocku-and-rollyou.txt`；`birthday-cake-2077.txt`；`tuwei-love-lines.txt`；`neighbor-laowang-wifi.dic` |
 | 通用软件 / 协议名 | **可保留**（Apache、nginx、MySQL、SSH、HTTP 等），版本号随机虚构 | `Server: nginx/9.9.9-banana`、`Apache/2077.0 (Sleepy)` |
-| 漏洞编号 | 统一 `CVE-2077-xxxx`（4 位数字），配恶搞漏洞名 | `CVE-2077-0520 午睡提权漏洞`、`CVE-2077-1314 奶茶注入` |
+| 漏洞编号 | 统一 `CVE-2077-` + 4 位数字（`^CVE-2077-\d{4}$`），配恶搞漏洞名 | `CVE-2077-0520 午睡提权漏洞`、`CVE-2077-1314 奶茶注入` |
 | 真实安全工具 / 恶意软件 / 勒索家族 / 黑客组织 | 禁用，改恶搞名 | "某扫描器"→ `PortStalker-Lite`；勒索家族 → `HugCrypt（拥抱加密）` |
 
-- 文本库与彩蛋配置纳入 CI 词表 lint：命中真实 CVE 正则 `CVE-(19|20)\d{2}-\d+`、真实字典名、真实组织名即构建失败。
+- 文本库与彩蛋配置纳入 CI 词表 lint：凡出现 `CVE-` 字样必须完全匹配 `^CVE-2077-\d{4}$`（如 `CVE-2077-0520`），否则构建失败；真实字典名、真实组织名同样拦截。
 
 ### 2.10 赞助外链规则
 - 赞助入口**只用普通 `<a href>` 文字外链**（可配本地打包的图标/emoji），`rel="noopener noreferrer"`、`target="_blank"`、`referrerpolicy="no-referrer"`。
@@ -152,15 +153,16 @@
 | M8 | WiFi 破解 | 扫描"附近 WiFi"列表 → 握手捕获 → 字典破解 | 密码"就写在路由器背面的贴纸上"（本页没去看） | ~30s | **P1** |
 | M9 | 黑客打字机（装 X 模式） | 全屏终端，乱敲键盘输出伪代码 | 按 ESC：「恭喜你打字速度 120 字/分，可以去当打字员了」 | 不限 | **P1** |
 | M10 | 手机远程控制（假） | 输入手机号显示文本 → 假手机界面被"接管" | 你"远程"做的唯一一件事：给对方的闹钟改成了"起床啦小懒猪" | ~35s | **P1** |
+| M11 | 一键神功（按钮墙） | 首页下方按六大类排布的荒诞「一键」按钮宫格，点击跑 3–5s 假进度后一句话反转 | 每个按钮一句反转；共性梗：点什么都「成功」，其实什么都没发生 | 每次 3–5s | **P0（首批 20 个）/ P1（扩到 40+）** |
 
-> MVP 共 **10** 个模块（7×P0 + 3×P1），满足 8–12 个且包含全部 6 个指定模块。
+> MVP 共 **11** 个模块。M11「一键神功」首批 20 个按钮为 P0，扩充到 40+ 个按钮为 P1。详见 §5 M11。
 
 ### 3.3 全局能力（MVP）
 
 | # | 能力 | 描述 | 优先级 |
 |---|---|---|---|
 | G1 | 常驻娱乐标识 + 首次免责声明 | 角标不可关；首访弹窗 | **P0** |
-| G2 | 首页模块宫格 + 路由 | 10 个模块卡片，带"整蛊类"标签 | **P0** |
+| G2 | 首页（大卡片 + 按钮墙 + 路由） | 上方 7 张正式剧本大卡片，下方 M11 六大类按钮宫格；原创夸张软件介绍风文案 | **P0** |
 | G3 | 主题 | Matrix 绿 / 赛博紫粉 / 红黑警报 | **P0** |
 | G4 | 音效系统 | 键盘、警报、完成、揭晓鼓点；一键静音 | **P0** |
 | G5 | 全屏模式 | Fullscreen API + 降级 | **P0** |
@@ -183,7 +185,7 @@
 ## 4. MVP 范围
 
 ### 4.1 包含
-- 10 个假工具模块（§3.2）+ G1–G9 全局能力。
+- 11 个假工具模块（§3.2，含 M11 首批 20 按钮）+ G1–G9 全局能力。
 - 合规兜底：CSP、零第三方、权限 API 禁用扫描、E2E 零请求断言、日志词表 lint。
 - Cloudflare Pages 部署流水线（§7.1）。
 
@@ -208,16 +210,28 @@
 >
 > 剧本中出现的机构名、字典名、漏洞编号均遵守 §2.9 命名规则。
 
-#### 彩蛋结构化写法 `{trigger, match, output}`
+#### 彩蛋结构化写法 `{trigger, match, count?, after?, when?, output}`
 所有结尾反转与中途彩蛋统一以配置数据描述，前端引擎读取执行（便于文本评审与 lint）：
 
 | 字段 | 含义 | 取值示例 |
 |---|---|---|
-| `trigger` | 触发时机 / 事件 | `flow.complete`、`click:<元素>`、`key:ESC`、`timer:15s`、`close.prank`、`input.submit` |
-| `match` | 匹配条件（本地判断，不涉及网络） | `always`、`random:0.3`、`input~/^127\.0\.0\.1$/`、`mode==cinematic`、`input.isEmpty` |
-| `output` | 输出效果 | `{text, fx?, sound?}`，fx 如 `heart-rain`、`glitch`、`confetti` |
+| `trigger` | 事件类型 | `click`、`key`、`timer`、`flow.complete`、`input.submit` |
+| `match` | 事件对象。`click` → 页面元素的 `data-egg` 标签值；`key` → 按键名；`timer` → 计时器 id；`flow.complete` → 模块 id | `"night-vision"`、`"logo"`、`"prank-close"`、`"Escape"`、`"m4.scare"`、`"m1"` |
+| `count`（可选） | 连续触发次数（连点 / 连按） | `3` |
+| `after`（可选） | `timer` 的延时 | `"15s"` |
+| `when`（可选） | 附加条件（本地判断，不涉及网络）；缺省即无条件兜底 | `random:0.3`、`input~/^127\.0\.0\.1$/`、`mode==cinematic`、`input.isEmpty` |
+| `output` | 输出效果 | `{text?, fx?, sound?}`，fx 如 `heart-rain`、`glitch`、`confetti`、`night-vision-3x` |
 
-同一 `trigger` 下按顺序取第一个 `match` 命中项；`always` 作为兜底放最后。
+同一 `trigger` + `match` 下按顺序取第一个 `when` 命中项；不带 `when` 的条目作为兜底放最后。
+
+对 `trigger:"click"` 的彩蛋，`match` 对应被点元素的 `data-egg` 标签值，可选 `count` 要求连点次数。示例：摄像头「夜视」按钮连点 3 下触发绿色夜视滤镜彩蛋，页面元素写 `data-egg="night-vision"`，彩蛋写：
+```yaml
+- { trigger: "click", match: "night-vision", count: 3, output: { fx: "night-vision-3x" } }
+```
+再如 Logo 的隐藏彩蛋（元素 `data-egg="logo"`）：
+```yaml
+- { trigger: "click", match: "logo", count: 5, output: { text: "你发现了开发团队的秘密：他们也不会写周报。" } }
+```
 
 ### M1『入侵』任意网站拿后台【P0 · 招牌】
 **时长**：~50s　**界面**：左侧伪终端日志、右侧五阶段进度条、顶部目标名、角落小地图闪点。
@@ -243,11 +257,11 @@ flowchart TD
 
 **结尾反转（彩蛋配置）**：
 ```yaml
-- { trigger: "click:老板坏话.txt", match: "always", output: { text: "老板其实挺好的，就是爱开会。" } }
-- { trigger: "flow.complete", match: "input~/^(127\\.0\\.0\\.1|localhost)$/", output: { text: "你成功入侵了你自己。建议早点睡。", fx: "confetti" } }
-- { trigger: "flow.complete", match: "random:0.3", output: { text: "管理员其实是一只橘猫，它不在乎。" } }
-- { trigger: "flow.complete", match: "random:0.3", output: { text: "后台数据库里只有一条记录：你今天还没喝水。" } }
-- { trigger: "flow.complete", match: "always", output: { text: "恭喜你成功入侵了……空气🤡 最高权限：把打印机设为默认双面打印。", fx: "glitch", sound: "reveal" } }
+- { trigger: "click", match: "boss-rant-file", output: { text: "老板其实挺好的，就是爱开会。" } }
+- { trigger: "flow.complete", match: "m1", when: "input~/^(127\\.0\\.0\\.1|localhost)$/", output: { text: "你成功入侵了你自己。建议早点睡。", fx: "confetti" } }
+- { trigger: "flow.complete", match: "m1", when: "random:0.3", output: { text: "管理员其实是一只橘猫，它不在乎。" } }
+- { trigger: "flow.complete", match: "m1", when: "random:0.3", output: { text: "后台数据库里只有一条记录：你今天还没喝水。" } }
+- { trigger: "flow.complete", match: "m1", output: { text: "恭喜你成功入侵了……空气🤡 最高权限：把打印机设为默认双面打印。", fx: "glitch", sound: "reveal" } }
 ```
 
 ---
@@ -269,8 +283,8 @@ flowchart LR
 
 **结尾反转（彩蛋配置）**：
 ```yaml
-- { trigger: "flow.complete", match: "random:0.3", output: { text: "所有端口都关着，因为对方在午睡。" } }
-- { trigger: "flow.complete", match: "always", output: { text: "扫描完成：发现 1 个开放端口——你的心门❤️（端口号 520）", fx: "heart-rain" } }
+- { trigger: "flow.complete", match: "m2", when: "random:0.3", output: { text: "所有端口都关着，因为对方在午睡。" } }
+- { trigger: "flow.complete", match: "m2", output: { text: "扫描完成：发现 1 个开放端口——你的心门❤️（端口号 520）", fx: "heart-rain" } }
 ```
 
 ---
@@ -287,10 +301,10 @@ flowchart LR
 
 **结尾反转（彩蛋配置）**：
 ```yaml
-- { trigger: "flow.complete", match: "dict==tuwei-love-lines.txt", output: { text: "密码是「你是我的 Wi-Fi，连上就不想断」。对方已脸红。" } }
-- { trigger: "flow.complete", match: "random:0.3", output: { text: "密码是 123456，系统管理员已被罚抄 100 遍。" } }
-- { trigger: "flow.complete", match: "random:0.3", output: { text: "密码就是你刚才输入的账号名，对方懒得想。" } }
-- { trigger: "flow.complete", match: "always", output: { text: "密码是 iloveyou。账号主人：你妈。她让你早点睡。", sound: "reveal" } }
+- { trigger: "flow.complete", match: "m3", when: "dict==tuwei-love-lines.txt", output: { text: "密码是「你是我的 Wi-Fi，连上就不想断」。对方已脸红。" } }
+- { trigger: "flow.complete", match: "m3", when: "random:0.3", output: { text: "密码是 123456，系统管理员已被罚抄 100 遍。" } }
+- { trigger: "flow.complete", match: "m3", when: "random:0.3", output: { text: "密码就是你刚才输入的账号名，对方懒得想。" } }
+- { trigger: "flow.complete", match: "m3", output: { text: "密码是 iloveyou。账号主人：你妈。她让你早点睡。", sound: "reveal" } }
 ```
 
 ---
@@ -310,15 +324,16 @@ flowchart TD
 |---|---|---|
 | 1 选摄像头 | 列表：`CAM-办公室鱼缸`、`CAM-楼道灭火器`、`CAM-隔壁老王阳台`（全虚构） | — |
 | 2 连接 | 伪握手日志 + 进度条 | 5s |
-| 3 监控 | 预置素材循环；点「录音」弹出字幕"对方正在说：今天中午吃什么？"；点「夜视」切绿色滤镜 | 15–20s |
+| 3 监控 | 预置素材循环；点「录音」弹出字幕"对方正在说：今天中午吃什么？"；点「夜视」切绿色滤镜（连点 3 下触发 `night-vision-3x` 超级夜视彩蛋，见 §5 彩蛋写法） | 15–20s |
 | 4 关闭 / 超时 | 「✕ 关闭整蛊」或 15s 惊吓上限后自动进入揭晓 | — |
 
 **结尾反转（彩蛋配置）**：
 ```yaml
-- { trigger: "click:录音", match: "always", output: { text: "对方正在说：今天中午吃什么？" } }
-- { trigger: "close.prank", match: "always", output: { text: "画面是假的，你的表情是真的。" } }
-- { trigger: "timer:15s", match: "random:0.4", output: { text: "这些摄像头其实都在拍同一条金鱼。" } }
-- { trigger: "timer:15s", match: "always", output: { text: "你成功接管了……一只橘猫的直播间。它决定不理你。", fx: "confetti" } }
+- { trigger: "click", match: "record-audio", output: { text: "对方正在说：今天中午吃什么？" } }
+- { trigger: "click", match: "night-vision", count: 3, output: { fx: "night-vision-3x", text: "超级夜视已开启：画面里的猫也戴上了夜视仪。" } }
+- { trigger: "click", match: "prank-close", output: { text: "画面是假的，你的表情是真的。" } }
+- { trigger: "timer", match: "m4.scare", after: "15s", when: "random:0.4", output: { text: "这些摄像头其实都在拍同一条金鱼。" } }
+- { trigger: "timer", match: "m4.scare", after: "15s", output: { text: "你成功接管了……一只橘猫的直播间。它决定不理你。", fx: "confetti" } }
 ```
 
 ---
@@ -343,9 +358,9 @@ flowchart TD
 
 **结尾反转（彩蛋配置）**：
 ```yaml
-- { trigger: "flow.complete", match: "input.isEmpty", output: { text: "卫星说它今天不想上班，只给了你一张猫爪印🐾。" } }
-- { trigger: "flow.complete", match: "random:0.3", output: { text: "目标位于：厨房冰箱与零食之间。" } }
-- { trigger: "flow.complete", match: "always", output: { text: "定位完成：火星市银河区 404 号——你家沙发缝里的遥控器。精度 ± 半个抱枕。" } }
+- { trigger: "flow.complete", match: "m5", when: "input.isEmpty", output: { text: "卫星说它今天不想上班，只给了你一张猫爪印🐾。" } }
+- { trigger: "flow.complete", match: "m5", when: "random:0.3", output: { text: "目标位于：厨房冰箱与零食之间。" } }
+- { trigger: "flow.complete", match: "m5", output: { text: "定位完成：火星市银河区 404 号——你家沙发缝里的遥控器。精度 ± 半个抱枕。" } }
 ```
 
 ---
@@ -373,10 +388,10 @@ flowchart TD
 
 **结尾反转（彩蛋配置）**：
 ```yaml
-- { trigger: "close.prank", match: "always", output: { text: "勒索信作者已自首：是你朋友干的。什么都没发生。" } }
-- { trigger: "timer:15s", match: "mode==cinematic", output: { text: "HugCrypt 解密完成：你的文件被加密成了……一个拥抱🤗。", fx: "heart-rain", sound: "reveal" } }
-- { trigger: "timer:15s", match: "random:0.3", output: { text: "解密完成：你桌面其实挺干净的（本页根本没看过）。" } }
-- { trigger: "timer:15s", match: "always", output: { text: "你的文件被加密成了……一个拥抱🤗。赎金：今晚请吃饭。" } }
+- { trigger: "click", match: "prank-close", output: { text: "勒索信作者已自首：是你朋友干的。什么都没发生。" } }
+- { trigger: "timer", match: "m6.scare", after: "15s", when: "mode==cinematic", output: { text: "HugCrypt 解密完成：你的文件被加密成了……一个拥抱🤗。", fx: "heart-rain", sound: "reveal" } }
+- { trigger: "timer", match: "m6.scare", after: "15s", when: "random:0.3", output: { text: "解密完成：你桌面其实挺干净的（本页根本没看过）。" } }
+- { trigger: "timer", match: "m6.scare", after: "15s", output: { text: "你的文件被加密成了……一个拥抱🤗。赎金：今晚请吃饭。" } }
 ```
 
 > **禁止出现**：比特币地址、支付宝/微信收款码、电话号码、"下载解密工具"链接、要求输入真实密码的输入框、阻止关闭的死循环。
@@ -395,9 +410,9 @@ flowchart TD
 
 **结尾反转（彩蛋配置）**：
 ```yaml
-- { trigger: "flow.complete", match: "power==萌萌哒", output: { text: "DDoS 解除：对方回了你一个贴贴。" } }
-- { trigger: "flow.complete", match: "random:0.3", output: { text: "你的节点其实都是小区里的智能电饭煲。" } }
-- { trigger: "flow.complete", match: "always", output: { text: "成功投送 100,000 ❤️，目标已被温暖 DDoS。", fx: "heart-rain" } }
+- { trigger: "flow.complete", match: "m7", when: "power==萌萌哒", output: { text: "DDoS 解除：对方回了你一个贴贴。" } }
+- { trigger: "flow.complete", match: "m7", when: "random:0.3", output: { text: "你的节点其实都是小区里的智能电饭煲。" } }
+- { trigger: "flow.complete", match: "m7", output: { text: "成功投送 100,000 ❤️，目标已被温暖 DDoS。", fx: "heart-rain" } }
 ```
 
 ---
@@ -413,9 +428,9 @@ flowchart TD
 
 **结尾反转（彩蛋配置）**：
 ```yaml
-- { trigger: "flow.complete", match: "ssid==隔壁老王的免费WiFi", output: { text: "老王说：想蹭网直接问，别装黑客。" } }
-- { trigger: "flow.complete", match: "random:0.3", output: { text: "密码是 wifi123456，管理员正在隔壁骂自己。" } }
-- { trigger: "flow.complete", match: "always", output: { text: "密码就写在路由器背面的贴纸上啦（本页没有、也不会看任何真实 WiFi）。" } }
+- { trigger: "flow.complete", match: "m8", when: "ssid==隔壁老王的免费WiFi", output: { text: "老王说：想蹭网直接问，别装黑客。" } }
+- { trigger: "flow.complete", match: "m8", when: "random:0.3", output: { text: "密码是 wifi123456，管理员正在隔壁骂自己。" } }
+- { trigger: "flow.complete", match: "m8", output: { text: "密码就写在路由器背面的贴纸上啦（本页没有、也不会看任何真实 WiFi）。" } }
 ```
 
 > **绝不**：读取真实 WiFi 列表、调用任何网络/蓝牙 API。
@@ -433,9 +448,9 @@ flowchart TD
 
 **结尾反转（彩蛋配置）**：
 ```yaml
-- { trigger: "timer:60s", match: "always", output: { text: "ERROR: coffee.exe not found（中途彩蛋，不退出）" } }
-- { trigger: "key:ESC", match: "random:0.3", output: { text: "系统提示：你其实在写周报。" } }
-- { trigger: "key:ESC", match: "always", output: { text: "打字速度约 {wpm} 字/分，可以去当打字员了。今天的漏洞一个都没写。" } }
+- { trigger: "timer", match: "m9.idle", after: "60s", output: { text: "ERROR: coffee.exe not found（中途彩蛋，不退出）" } }
+- { trigger: "key", match: "Escape", when: "random:0.3", output: { text: "系统提示：你其实在写周报。" } }
+- { trigger: "key", match: "Escape", output: { text: "打字速度约 {wpm} 字/分，可以去当打字员了。今天的漏洞一个都没写。" } }
 ```
 
 ---
@@ -452,10 +467,123 @@ flowchart TD
 
 **结尾反转（彩蛋配置）**：
 ```yaml
-- { trigger: "click:相册", match: "always", output: { text: "相册里 9999 张，全是猫。" } }
-- { trigger: "flow.complete", match: "random:0.3", output: { text: "远程控制失败：对方手机是老年机，只支持贪吃蛇🐍。" } }
-- { trigger: "flow.complete", match: "always", output: { text: "你远程做成的唯一一件事：把对方闹钟改成了「起床啦小懒猪」。" } }
+- { trigger: "click", match: "album", output: { text: "相册里 9999 张，全是猫。" } }
+- { trigger: "flow.complete", match: "m10", when: "random:0.3", output: { text: "远程控制失败：对方手机是老年机，只支持贪吃蛇🐍。" } }
+- { trigger: "flow.complete", match: "m10", output: { text: "你远程做成的唯一一件事：把对方闹钟改成了「起床啦小懒猪」。" } }
 ```
+
+---
+
+### M11 一键神功（按钮墙）【P0 首批 20 / P1 扩至 40+】
+**灵感来源**：GodOfHacker（WWILLV）的「一键按钮墙」创意。**仅借创意**：不使用其代码、图片、按钮文案或分类名；所有按钮名、梗、分类显示名均为本项目原创。
+
+**形态**：首页下方一整面「一键」按钮宫格，按六大类分组。点任意按钮 → 跑 3–5 秒假进度条 → 一句话反转（"成功了……但其实什么都没发生"）。纯本地，点击不发任何请求、不打开任何外链。
+
+**首页结构**
+```mermaid
+flowchart TD
+  A[首页顶部：原创夸张软件介绍文案 + 常驻娱乐角标] --> B[上方区：7 张正式剧本大卡片 M1~M7]
+  B --> C[下方区：M11 六大类按钮宫格]
+  C --> D[点任意按钮 → 3~5s 假进度 → 一句话反转 → 可继续点下一个]
+```
+
+**分类枚举与页面显示名**（`category` 为内部枚举，页面显示名本项目自拟，**不沿用原作分类叫法**）：
+
+| `category`（内部） | 页面显示分类名（原创，可再调） | 说明 |
+|---|---|---|
+| `site` | 「网站魔法」 | 对网站的各种搞笑"操作" |
+| `crack` | 「拆解实验室」 | 各种"破解""绕过"的搞笑版 |
+| `ctf` | 「夺旗练习场」 | CTF/解题风格的荒诞按钮 |
+| `wireless` | 「空中信号站」 | 无线/信号相关搞笑梗 |
+| `hardware` | 「铁盒子们」 | 硬件/设备相关搞笑梗 |
+| `mystic` | 「玄学办公室」 | 玄学/运势/非理性梗 |
+
+**首页介绍文案风格**：原创的夸张软件介绍风（自吹自擂、中二、反差），不使用原作原句。示例方向（最终由剧本文案撰写、策划审核）：
+- "本工具箱内置 ∞ 项黑科技，经过 0 次真机测试，稳定性堪比薛定谔的猫。"
+- "点一下，宇宙为你让路；点两下，Wi-Fi 自己连上（并没有）。"
+
+**单个按钮交互流程**
+| 步骤 | 界面元素 | 时长 |
+|---|---|---|
+| 1 点击 | 按钮按下动效 + 音效 | — |
+| 2 假进度 | 进度条 / 滚动伪日志（可选 `logs`、`steps`）；可选 `stall`：进度卡在某个两位数百分比上抖两下再继续 | 3–5s（`duration`） |
+| 3 反转 | 弹出一句话 `twist`（"成功"但其实什么都没发生） | 瞬时 |
+
+> 进度卡顿梗为本项目自有写法：`stall` 字段可填任意两位数（如 88、99、73），**不设"致敬原作某个数字"的说法**。
+
+**按钮数据结构（字段定义）**
+```yaml
+# 每个按钮一条配置
+- id: string            # 唯一标识
+  category: enum        # site | crack | ctf | wireless | hardware | mystic
+  label: string         # 按钮显示文案（原创，策划审核）
+  duration: number      # 假进度时长，3~5 秒
+  stall?: number        # 可选，进度卡顿的两位数百分比，如 99
+  twist: string         # 一句话反转文案
+  logs?: string[]       # 可选，进度中滚动的伪日志行
+  steps?: string[]      # 可选，分步骤文案（替代纯进度条）
+```
+
+**示例按钮配置**（原创占位，最终以文案库为准）
+```yaml
+- id: site-speed-of-light
+  category: site
+  label: 一键让全宇宙网站光速打开
+  duration: 4
+  stall: 99
+  twist: 已提速！网站没变快，但你等待时的心情变好了。
+  logs: ["接入银河主干网…", "给光子加油…", "卡在 99%，正在思考人生…"]
+- id: crack-open-everything
+  category: crack
+  label: 一键破解世界上所有的锁
+  duration: 5
+  stall: 88
+  twist: 破解成功！唯一没打开的是你的心结。
+- id: mystic-rename-luck
+  category: mystic
+  label: 一键把今日运势改成「大吉」
+  duration: 3
+  twist: 已改为大吉。有效期：直到你下一次点开它。
+```
+
+**首批 20 个按钮初稿（P0）**：初稿占位，上线前须经剧本文案定稿、策划审核，并通过原作雷同比对与敏感梗扫描。
+
+| # | id | category | label | duration | stall | twist |
+|---|---|---|---|---|---|---|
+| 1 | site-speed-of-light | site | 一键让全宇宙网站光速打开 | 4 | 99 | 已提速！网站没变快，但你等待时的心情变好了。 |
+| 2 | site-404-cure | site | 一键治好所有 404 | 3 | — | 治好了！它们现在统一显示 405。 |
+| 3 | site-dark-mode-universe | site | 一键给互联网开暗黑模式 | 4 | 73 | 已开启！……是你显示器亮度调低了。 |
+| 4 | crack-all-locks | crack | 一键破解世界上所有的锁 | 5 | 88 | 破解成功！唯一没打开的是你的心结。 |
+| 5 | crack-legacy-code | crack | 一键读懂祖传代码 | 5 | 99 | 读懂了一行注释：「别动，能跑」。 |
+| 6 | crack-monday | crack | 一键破解周一 | 4 | — | 破解失败：周一是宇宙出厂自带功能。 |
+| 7 | ctf-flag-auto | ctf | 一键自动交 flag | 4 | 99 | 已提交：flag{你_真的_信了}。 |
+| 8 | ctf-read-setter-mind | ctf | 一键读取出题人脑回路 | 5 | 66 | 读取完毕：出题人自己也没想明白。 |
+| 9 | ctf-ak-all | ctf | 一键 AK 全场 | 3 | — | AK 成功！……AK 的是零食柜。 |
+| 10 | wireless-full-bars | wireless | 一键信号满格 | 3 | 99 | 满格了！我们把信号图标画满了。 |
+| 11 | wireless-5g-to-50g | wireless | 一键把 5G 升级成 50G | 4 | — | 升级成功！G 变多了，网速没变。 |
+| 12 | wireless-pair-sock | wireless | 一键蓝牙配对失散多年的袜子 | 4 | 81 | 配对成功：另一只袜子在洗衣机里向你挥手。 |
+| 13 | hw-cpu-1000 | hardware | 一键 CPU 超频 1000% | 5 | 99 | 超频成功！风扇已经开始唱歌了。 |
+| 14 | hw-battery-forever | hardware | 一键电池永不没电 | 4 | — | 已设置！电量图标锁定在 100%（只是图标）。 |
+| 15 | hw-keyboard-rgb | hardware | 一键给键盘加 RGB 灯效 | 3 | 55 | 已加！灯效位于你的想象力中。 |
+| 16 | mystic-zero-bug | mystic | 一键代码零 Bug | 5 | 99 | 零 Bug 达成！所有 Bug 已改名为 Feature。 |
+| 17 | mystic-server-bless | mystic | 一键给服务器开光 | 4 | 77 | 开光完成：今日宜部署，忌周五上线。 |
+| 18 | mystic-luck-max | mystic | 一键把今日运势改成「大吉」 | 3 | — | 已改为大吉。有效期：到你下次点开为止。 |
+| 19 | mystic-dev-launch | mystic | 一键催研发上线 | 4 | 99 | 研发回复：「下周一定」。（研发团队自嘲专用） |
+| 20 | site-dev-docs | site | 一键补齐全部开发文档 | 5 | 98 | 补齐了！文档内容：「详见代码」。（研发团队自嘲专用） |
+
+**P1 扩充（至 40+）**：每个分类再补 4 个以上按钮，同样走"文案撰写 → 策划审核 → 原作雷同比对 → 敏感梗扫描"流程；方向示例：一键让会议变短、一键把需求变少、一键把咖啡续杯（都只在屏幕上"成功"）。
+
+**结尾反转（彩蛋配置）**：M11 没有统一结局页，每个按钮的 `twist` 即其反转；共性兜底：
+```yaml
+- { trigger: "flow.complete", match: "m11.button", output: { text: "{button.twist}", sound: "reveal" } }
+```
+
+**M11 审核标准（文案库上线前逐条过）**
+- 按钮名与梗由剧本文案撰写、策划审核。
+- **禁止**：照搬或近似改写原作的按钮名 / 文案 / 分类名；涉及隐私、偷窥、骚扰、低俗、财产犯罪暗示的梗。
+- **禁止**：任何真实外链或请求（原作点击会打开音乐/社群链接，本项目一律不做）。
+- **允许**：自嘲研发团队的梗。
+- **测试逐条比对**：E2E / 内容 lint 逐条核对按钮名与梗，拦截与原作雷同或近似改写的条目（维护一份原作词条对照黑名单）。
 
 ---
 
@@ -494,7 +622,8 @@ flowchart TD
 - **成片增强（P2）**：BGM、字幕轨、多段拼接。
 - 分享文案模板：「我刚"黑"进了 XXX（其实是假的）→ [站点链接]」。
 
-### 6.5 文案语气
+### 6.5 文案语气与「关于」页致谢
+- 「关于」页用**纯文字**致谢灵感来源：说明 M11「一键神功」的按钮墙创意受 GodOfHacker（作者 WWILLV）启发，本项目**仅借创意**，未使用其任何代码、图片或文案；附项目仓库名称（纯文字，不做可点击真实外链、不加载任何远程资源）。
 - 过程：半严肃半中二；奇偶句穿插梗。
 - 揭晓：明确、温柔、好笑，**不羞辱用户**。
 - 禁用：真实恐吓、歧视、色情、血腥、真实勒索话术。
@@ -538,7 +667,8 @@ flowchart TD
 
 ### 7.5 可测试性与合规验收
 - 单元测试：假数据生成器（IP 段合法性、无真实 CVE）。
-- E2E：Playwright 跑完 10 个模块，断言无额外网络请求、无权限弹窗；勒索弹窗两种模式下均断言 ESC / 关闭按钮 1 次操作即退出、`beforeunload` 未注册；赞助链接点击前零请求。
+- E2E：Playwright 跑完 11 个模块，断言无额外网络请求、无权限弹窗；勒索弹窗两种模式下均断言 ESC / 关闭按钮 1 次操作即退出、`beforeunload` 未注册；赞助链接点击前零请求；M11 每个按钮点击只跑本地动画、零请求、零外链。
+- 内容 lint：M11 按钮名与梗逐条比对原作词条黑名单，拦截雷同或近似改写；扫描隐私/偷窥/骚扰/低俗/财产犯罪暗示关键词。
 - 内容词表 lint：拦截真实 CVE / 勒索家族名 / 真实工具有效命令黑名单。
 - 源码扫描：禁止 `getUserMedia` 等敏感 API 字符串。
 
@@ -562,11 +692,11 @@ flowchart TD
 P0（首发必须）:
   M1 入侵网站拿后台 | M2 端口扫描 | M3 密码爆破
   M4 摄像头接管     | M5 卫星追踪 | M6 勒索弹窗整蛊
-  M7 DDoS 面板
+  M7 DDoS 面板      | M11 一键神功（首批 20 个按钮）
   + G1 声明角标 | G2 首页宫格 | G3 主题 | G4 音效 | G5 全屏 | G6 揭晓页/假数据
 
 P1（MVP 含，可排期靠后）:
-  M8 WiFi 破解 | M9 黑客打字机 | M10 手机远程控制
+  M8 WiFi 破解 | M9 黑客打字机 | M10 手机远程控制 | M11 扩至 40+ 按钮
   + G7 截图水印 | G8 跳过/加速 | G9 9:16 竖屏导出
 
 P2（迭代）:
@@ -581,7 +711,9 @@ P2（迭代）:
 - [ ] 勒索弹窗温和 / 电影级两种模式均可一键关闭
 - [ ] 赞助链接为普通 `<a>`，点击前零请求
 - [ ] E2E 零请求 + 敏感 API 扫描通过
-- [ ] 10 个模块均可走完并到达反转揭晓页
+- [ ] 11 个模块均可走完并到达反转揭晓页；M11 每个按钮 3–5s 假进度 + 一句反转
+- [ ] M11 按钮名/梗通过原作雷同比对与敏感梗扫描
+- [ ] 「关于」页纯文字致谢灵感来源，无真实外链
 - [ ] 角标在全屏 / 勒索弹窗 / 摄像头页可见
 - [ ] 移动端与桌面各走查一遍
 
