@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const CVE_ANY = /CVE-\d{4}-\w+/gi;
-const CVE_OK = /^CVE-2077-/i;
+const CVE_OK = /^CVE-2077-\d{4}$/; // 严格：CVE-2077- + 4 位数字（QA）
 const BLOCK = [
   // 真实泄露字典 / 词表
   'rockyou', 'darkc0de', 'crackstation', 'SecLists', 'hashkiller',
@@ -28,8 +28,7 @@ const BLOCK_CS_RE = new RegExp(`(?<![A-Za-z])(${BLOCK_CS.join('|')})(?![A-Za-z])
 const issues = [], warns = [];
 function checkText(where, s) {
   for (const m of s.match(CVE_ANY) ?? []) {
-    if (!CVE_OK.test(m)) issues.push(`${where}: 真实格式 CVE「${m}」→ 请用 CVE-2077-NNNN`);
-    else if (!/^CVE-2077-\d{4}$/.test(m)) issues.push(`${where}: 「${m}」必须为 CVE-2077-NNNN（4 位数字，PRD §2.9）`);
+    if (!CVE_OK.test(m)) issues.push(`${where}: 「${m}」必须为 CVE-2077-NNNN（4 位数字，PRD §2.9）`);
   }
   const b = BLOCK_RE.exec(s) ?? BLOCK_CS_RE.exec(s); if (b) issues.push(`${where}: 禁用名称「${b[1]}」→ 请改恶搞名`);
 }

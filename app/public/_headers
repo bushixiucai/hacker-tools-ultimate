@@ -1,5 +1,9 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; worker-src 'none'; manifest-src 'self'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
-  Permissions-Policy: camera=(), microphone=(), geolocation=(), bluetooth=(), clipboard-read=()
+  X-Frame-Options: DENY
+  Cross-Origin-Opener-Policy: same-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), bluetooth=(), clipboard-read=(), usb=(), payment=(), interest-cohort=()
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
