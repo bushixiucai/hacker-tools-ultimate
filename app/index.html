@@ -13,15 +13,63 @@
   <main>
     <header>
       <h1 class="glitch" data-text="黑客工具箱·搞怪版">黑客工具箱·搞怪版</h1>
-      <p class="sub">v0.1 // 超级专业（假）渗透平台 · <a href="#" id="open-disclaimer">免责声明</a> · <button type="button" id="fs-btn" class="mini">⛶ 全屏</button></p>
+      <nav class="sub" aria-label="主导航">
+        <a href="#/" data-nav="home">首页</a> ·
+        <a href="#/tool" data-nav="tool">终端</a> ·
+        <a href="#/about" data-nav="about">关于</a> ·
+        <a href="#" id="open-disclaimer">免责声明</a> ·
+        <button type="button" id="fs-btn" class="mini">⛶ 全屏</button>
+        <span id="settings-slot"></span>
+      </nav>
     </header>
-    <div class="grid">
+
+    <section id="view-home" class="view page" aria-label="模块宫格">
+      <p class="lead">选一个"黑客工具"开始表演（全部为本地动画，不会碰任何真实目标）。</p>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <div id="view-tool" class="view grid hidden">
       <section class="panel" id="term-panel"><div class="ptitle">root@toolbox:~# 终端</div></section>
-      <section class="panel"><div class="ptitle">全球追踪 // TRACE MAP</div>
-        <canvas id="map" width="640" height="320"></canvas>
-        <div id="hops"></div><div id="bars"></div>
+      <section class="panel" id="side-panel"><div class="ptitle" id="side-title">全球追踪 // TRACE MAP</div>
+        <div id="map-wrap"><canvas id="map" width="640" height="320"></canvas><div id="hops"></div></div>
+        <div id="cam-slot"></div>
+        <div id="bars"></div>
       </section>
     </div>
+
+    <section id="view-about" class="view page hidden" aria-label="关于">
+      <h2>关于本站</h2>
+      <p>「黑客工具箱·搞怪版」（工作名 hacker-toolbox-prank）是一个<strong>假</strong>黑客模拟器：所有扫描、破解、入侵、追踪都是本地动画与虚构文本。</p>
+      <ul>
+        <li>零网络请求：页面 CSP 为 <code>connect-src 'none'</code>，不加载任何第三方资源。</li>
+        <li>零统计、零 Cookie、零权限：不调用摄像头、麦克风、定位、剪贴板读取等能力。</li>
+        <li>设置（主题、音效、免责声明已读）只存在本机 localStorage，可随时一键清除。</li>
+        <li>请勿用于欺骗、恐吓他人或违法用途；整蛊请适度，玩完告诉对方这是假的。</li>
+      </ul>
+      <p><button type="button" id="reset-settings">清除本地设置</button> <span id="reset-msg" class="dim"></span></p>
+      <footer class="sponsor-row">
+        <!-- 赞助外链（PRD §2.10）：仅允许普通 <a href>，须带 target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"；链接待定时保留无 href 占位 -->
+        <a class="sponsor placeholder" aria-disabled="true" title="赞助链接待定">☕ 请作者喝杯奶茶（链接待定）</a>
+      </footer>
+    </section>
+
+    <section id="view-reveal" class="view page hidden" aria-label="反转揭晓">
+      <div class="reveal-card">
+        <div class="reveal-tag">反转揭晓 · <span id="reveal-tool"></span></div>
+        <h2 id="reveal-title" class="glitch"></h2>
+        <p id="reveal-body"></p>
+        <p class="reveal-note">刚才全部是本地模拟，没有任何真实请求，也没有碰到任何真实目标。</p>
+        <div class="reveal-actions">
+          <button type="button" id="reveal-again">↻ 再玩一次</button>
+          <button type="button" id="reveal-home">⌂ 回首页</button>
+          <button type="button" id="reveal-share">🔗 复制分享链接</button>
+          <span id="reveal-share-msg" class="dim"></span>
+        </div>
+      </div>
+      <footer class="sponsor-row">
+        <a class="sponsor placeholder" aria-disabled="true" title="赞助链接待定">☕ 觉得好笑？请作者喝杯奶茶（链接待定）</a>
+      </footer>
+    </section>
   </main>
   <script type="module" src="/src/main.ts"></script>
 </body>

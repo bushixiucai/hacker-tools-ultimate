@@ -2,6 +2,8 @@ import './style.css';
 import { Terminal, WorldMap, startCodeRain, type LineKind } from './effects';
 import { showDisclaimer } from './ui/disclaimer';
 import { onFullscreenChange, toggleFullscreen } from './ui/fullscreen';
+import { parseRoute, replaceHash, showView } from './ui/router';
+import { decodeReveal, encodeReveal, renderReveal } from './ui/reveal';
 import { SCRIPTS, UNPARSED_EGGS, fakeIp, fill, runScenario, type ScenarioScript, type Vars } from './scenario';
 
 startCodeRain(document.querySelector<HTMLCanvasElement>('#rain')!);
@@ -57,7 +59,10 @@ for (const s of SCRIPTS) term.register({
         if (n >= (e.count ?? 3)) term.print(fill(e.output, vars), 'warn');
       }
     }
-    await runScenario(s, { term, map, barsEl }, vars);
+    showView('tool');
+    const r = await runScenario(s, { term, map, barsEl }, vars);
+    // G6：揭晓弹窗关闭后进入统一揭晓页（状态在 hash 中，可分享）
+    if (r) location.hash = '#/reveal/' + encodeReveal({ s: s.id, n: s.description, t: r.title, b: r.text, tg: args.length ? vars.target : undefined });
   },
 });
 
@@ -97,7 +102,42 @@ onFullscreenChange((on, mode) => {
 document.querySelector('#open-disclaimer')!.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); void showDisclaimer(true, 0); });
 document.body.dataset.scripts = SCRIPTS.map((s) => s.id).join(',');
 
+// G2 首页模块宫格
+const PRANK = new Set(['camera-takeover', 'ransom-prank']); // 整蛊类（PRD §2.8）
+const cards = document.querySelector<HTMLElement>('#cards')!;
+for (const sc of SCRIPTS) {
+  const c = document.createElement('button'); c.type = 'button'; c.className = 'card'; c.dataset.script = sc.id;
+  const h = document.createElement('div'); h.className = 'card-title'; h.textContent = sc.description;
+  const t = document.createElement('div'); t.className = 'card-tool'; t.textContent = sc.name;
+  const u = document.createElement('div'); u.className = 'card-cmd'; u.textContent = `$ ${sc.usage ?? sc.id}`;
+  c.append(h, t, u);
+  if (PRANK.has(sc.id)) { const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = '整蛊类'; c.append(tag); }
+  c.onclick = () => { location.hash = `#/tool/${encodeURIComponent(sc.id)}`; };
+  cards.append(c);
+}
+// 关于页：一键清除本地设置（R10）
+document.querySelector<HTMLButtonElement>('#reset-settings')!.onclick = () => {
+  Object.keys(localStorage).filter((k) => k.startsWith('htb.')).forEach((k) => localStorage.removeItem(k));
+  document.querySelector('#reset-msg')!.textContent = '已清除（刷新后生效）';
+};
+
+let started = false;
+async function route() {
+  const r = parseRoute();
+  showView(r.view);
+  if (r.view === 'reveal') renderReveal(decodeReveal(r.payload), {
+    onAgain: (id, tg) => { location.hash = `#/tool/${encodeURIComponent(id)}${tg ? '?target=' + encodeURIComponent(tg) : ''}`; },
+    onHome: () => { location.hash = '#/'; },
+  });
+  if (r.view === 'tool') {
+    term.input.focus();
+    if (r.id && started && !term.isBusy) { replaceHash('#/tool'); await term.exec([r.id, r.target].filter(Boolean).join(' ')); }
+  }
+}
+addEventListener('hashchange', () => void route());
+
 void (async () => {
+  showView(parseRoute().view === 'reveal' ? 'reveal' : parseRoute().view);
   await showDisclaimer();
   await term.type('欢迎使用 黑客工具箱·搞怪版 v0.1', 'ok', 30);
   await term.type('本工具所有效果均为本地模拟，请放心“入侵”。输入 help 开始。', 'warn', 15);
@@ -107,5 +147,7 @@ void (async () => {
   if (m?.[1]) document.body.dataset.autoDismiss = '1';
   if (m) for (const c of decodeURIComponent(m[2]).split(';;')) await term.exec(c);
   else if (location.hash === '#demo') await term.exec('port-scan');
+  started = true;
+  if (!m) await route();
   document.body.dataset.autorunDone = '1';
 })();

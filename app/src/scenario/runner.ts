@@ -5,12 +5,15 @@ import type { ScenarioScript, Step } from './types';
 export interface RunnerEnv { term: Terminal; map?: WorldMap; barsEl: HTMLElement; speed?: number }
 const ms = (v: number | [number, number]) => (Array.isArray(v) ? rnd(v[0], v[1]) : v);
 
-/** 在终端中依次播放脚本步骤 */
-export async function runScenario(s: ScenarioScript, env: RunnerEnv, vars: Vars) {
+export interface RevealResult { title: string; text: string }
+/** 在终端中依次播放脚本步骤；返回揭晓内容（用于揭晓页） */
+export async function runScenario(s: ScenarioScript, env: RunnerEnv, vars: Vars): Promise<RevealResult | undefined> {
+  let result: RevealResult | undefined;
   const k = 1 / (env.speed ?? 1), T = env.term, t0 = performance.now();
   const pending: Promise<void>[] = [];
   for (const step of s.steps) await play(step);
   await Promise.all(pending);
+  return result;
   async function play(st: Step) {
     switch (st.type) {
       case 'type': return T.type(fill(st.text, vars), st.kind, (st.speed ?? 14) * k);
@@ -40,6 +43,7 @@ export async function runScenario(s: ScenarioScript, env: RunnerEnv, vars: Vars)
         await Promise.all(pending);
         const text = fill(pick(st.texts), vars), title = fill(st.title ?? 'ACCESS GRANTED', vars);
         T.print(`[揭晓] ${text.replace(/\n/g, ' ')}`, 'warn');
+        result = { title, text };
         return glitchPopup(title, { reveal: text, button: st.button, revealTitle: st.keepTitle ? title : undefined });
       }
     }
