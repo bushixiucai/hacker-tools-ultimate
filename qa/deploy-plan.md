@@ -11,6 +11,9 @@
 
 > 注意：构建会 import `../../../scripts/*.json`（仓库根 `scripts/`，root 之外）。Cloudflare 会 clone 整个仓库，所以可行，但仓库里**必须同时提交 `scripts/`**。
 
+## 仓库
+Cloudflare Pages → Connect to Git → GitHub `bushixiucai/hacker-tools-ultimate`，root=`app`。
+
 ## 分支
 - Production branch：`main` → `<project>.pages.dev`
 - Preview：其它分支/PR 自动预览 `<hash>.<project>.pages.dev`；建议在 Preview 开启 Cloudflare Access 或 robots noindex（可选）。
@@ -32,10 +35,10 @@
 **必须**：Cloudflare Web Analytics = OFF（PRD 零统计）。另关闭 Web Analytics / Zaraz / Email obfuscation / Rocket Loader、Speed Brain/预取类功能，否则会注入第三方脚本并违反 CSP 与"零统计"。
 
 ## SPA 回退
-单页、无前端路由（只用 hash），**不需要** `_redirects`。若将来加路由：`/* /index.html 200`。
+单页，hash 路由（#about、揭晓页 hash），**不需要** `_redirects`。若将来加路由：`/* /index.html 200`。
 
 ## 上线步骤
-1. Tiger 建 GitHub 仓库并推送（含 app/ 与 scripts/）。
+1. 仓库已在 GitHub（main: a96eeb8→676b509）；确认未提交改动已推送且含 scripts/。
 2. Pages → Connect to Git → 按上表配置 → 首次部署到 Preview 分支验证。
 3. 用 test-checklist.md 在 preview URL 上复测（DevTools Network 只见同源、响应头含 CSP）。
 4. 合并到 main 发布 Production。

@@ -12,12 +12,16 @@
 
 ## 功能
 - [ ] `#autorun=<命令>` 下 site-takeover / password-bruteforce / port-scan / trace 跑到结束，无 console 报错
-- [ ] 9 个彩蛋：root（arg）、zodiac-dict、sudo、sudo make me a sandwich、hack nasa、google.com（arg）、127.0.0.1（arg）、同目标 3 次（repeat）、标题连点 5 次（Kitty 切换，再 5 次退出）
+- [ ] 7 个脚本（site-takeover, password-bruteforce, port-scan, camera-takeover, satellite-trace, ransom-prank, ddos-panel）`#autorun=` 跑到结束；`npm run test:e2e` 12/12
+- [ ] 首访免责弹窗：约 3s 出现、需接受、localStorage `htb.disclaimer.v1` 记忆、可经链接/`disclaimer` 命令重开
+- [ ] camera-takeover 不调用 getUserMedia/enumerateDevices（零摄像头权限请求）
+- [ ] 彩蛋（每脚本 3 个，以 scripts/*.json easter_eggs 为准）逐个触发；标题连点 5 次 → Kitty 模式，再 5 次退出
+- [ ] ⏸ PENDING：camera `night-vision-3x`（待摄像头夜视按钮实现后再加入；当前 loader 会把 click 当作 logo 点击，暂不测）
 
 ## §2.9 命名规则（扫描：`rg -niE 'CVE-(19|20)\d{2}-\d+|rockyou|google|nasa|tencent|alibaba' scripts app/src`，匹配串 match 字段除外）
 - [ ] 通用软件名（Apache、nginx）可用
 - [ ] 脚本中硬编码的机构名/字典名必须是戏仿（Goggle、NASB、rocku-and-rollyou.txt），不得出现 Google/NASA/rockyou 原名输出
-- [ ] 假 CVE 一律 `CVE-2077-` + 4 位数字（`CVE-2077-FAKE` 不合格）
+- [ ] 假 CVE 一律 `CVE-2077-` + 4 位数字（当前 port-scan 用 CVE-2077-1337 ✔；`check:names` 强制）
 - [ ] 真实安全工具/恶意软件/勒索家族/黑客组织名禁用
 - [ ] 用户自己输入的目标（如 google.com、nasa 作为匹配串）不受限
 
