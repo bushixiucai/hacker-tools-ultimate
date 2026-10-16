@@ -49,7 +49,7 @@
     },
     {
       "t": 8000,
-      "text": "[!!!] 发现超级漏洞 CVE-2077-FAKE：后台密码疑似为 'not-a-real-password'"
+      "text": "[!!!] 发现超级漏洞 CVE-2077-1337：后台密码疑似为 'not-a-real-password'"
     },
     {
       "t": 8800,

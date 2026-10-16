@@ -8,3 +8,4 @@ blob-report/
 # QA 临时产物（截图/脚本/依赖），仅保留 qa/*.md
 qa/pw/
 qa/*.png
+qa/*.log
