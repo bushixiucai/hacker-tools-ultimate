@@ -3,6 +3,8 @@ import { Terminal, WorldMap, startCodeRain, type LineKind } from './effects';
 import { showDisclaimer } from './ui/disclaimer';
 import { onFullscreenChange, toggleFullscreen } from './ui/fullscreen';
 import { parseRoute, replaceHash, showView } from './ui/router';
+import { CameraModule } from './modules/camera';
+import { BUILTIN_EGGS } from './eggs.builtin';
 import { decodeReveal, encodeReveal, renderReveal } from './ui/reveal';
 import { SCRIPTS, UNPARSED_EGGS, fakeIp, fill, runScenario, type ScenarioScript, type Vars } from './scenario';
 
@@ -12,7 +14,8 @@ const barsEl = document.querySelector<HTMLElement>('#bars')!;
 const panel = document.querySelector<HTMLElement>('#term-panel')!;
 const term = new Terminal(panel);
 const eggKind = (t: string): LineKind => (t.startsWith('[x]') ? 'err' : t.startsWith('[OK]') || t.startsWith('[+]') ? 'ok' : 'warn');
-const allEggs = SCRIPTS.flatMap((s) => (s.easterEggs ?? []).map((e) => ({ ...e, script: s.id })));
+const scriptEggs = SCRIPTS.flatMap((s) => (s.easterEggs ?? []).map((e) => ({ ...e, script: s.id })));
+const allEggs = [...scriptEggs, ...BUILTIN_EGGS.filter((b) => !scriptEggs.some((e) => e.kind === 'click' && e.element === b.element))];
 
 term.register(
   { name: 'help', description: '显示帮助', run: ({ term: t }) => {
@@ -60,7 +63,19 @@ for (const s of SCRIPTS) term.register({
       }
     }
     showView('tool');
-    const r = await runScenario(s, { term, map, barsEl }, vars);
+    // 模块专属画面：camera-takeover → 假监控网格（替换右侧地图）
+    const ctl = new AbortController(); let cam: CameraModule | undefined;
+    if (s.id === 'camera-takeover') {
+      cam = new CameraModule(() => ctl.abort());
+      document.querySelector('#map-wrap')!.classList.add('hidden');
+      document.querySelector('#side-title')!.textContent = '监控网格 // CAM GRID（本地生成，非真实摄像头）';
+      cam.mount(document.querySelector<HTMLElement>('#cam-slot')!);
+    }
+    let r;
+    try { r = await runScenario(s, { term, map, barsEl, signal: ctl.signal }, vars); }
+    finally {
+      if (cam) { cam.unmount(); document.querySelector('#map-wrap')!.classList.remove('hidden'); document.querySelector('#side-title')!.textContent = '全球追踪 // TRACE MAP'; }
+    }
     // G6：揭晓弹窗关闭后进入统一揭晓页（状态在 hash 中，可分享）
     if (r) location.hash = '#/reveal/' + encodeReveal({ s: s.id, n: s.description, t: r.title, b: r.text, tg: args.length ? vars.target : undefined });
   },

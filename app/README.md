@@ -99,7 +99,8 @@ npm run test:e2e          # build + Playwright E2E（首次需 npx playwright in
 - **免责声明**（PRD R16）：首访弹出，3 秒后才能点「我已了解」；记忆在 `localStorage['htb.disclaimer.v1']`；可通过标题下「免责声明」链接或 `disclaimer` 命令重新打开。
 - **全屏**（G5）：标题下按钮或 `fullscreen` 命令；Fullscreen API 失败时降级为 CSS 沉浸模式；Esc 退出；横幅始终可见。
 - **弹窗**（`glitchPopup`）：按钮 / Esc / 双击遮罩 均可关闭；惊吓阶段的首次关闭操作先切到揭晓文案（R15），不劫持浏览器、不注册 beforeunload。M6 勒索弹窗将复用。
-- **彩蛋 click**：`match` 为元素名 + 次数（`logo-click-5`、`close-prank`、`night-vision-3x`），对应页面上 `[data-egg="<元素名>"]`；`logo`=标题，`close-prank`=弹窗关闭按钮；尚无对应元素的（如 `night-vision`）待相应模块实现。
+- **彩蛋 click**：`match` 必须指明目标元素（页面 `[data-egg]` 值），缺失即构建失败，绝不默认为 logo。现有目标：`logo`、`night-vision`、`record`、`close-prank`。内置彩蛋（`src/eggs.builtin.ts`）：`night-vision` ×3、`record` ×1，剧本若定义同一目标则以剧本为准。
+- **M4 摄像头**：`camera-takeover` 运行时右侧换成 Canvas 生成的假监控网格（橘猫 + OSD，标注 FAKE），控制条：云台 ◀▶、「🌙 夜视 3x」、「🎙 录音」，右上「✕ 关闭整蛊」/ Esc / 双击画面 → 立即进入揭晓。绝不调用真实摄像头或请求权限。
 
 ## 零网络保障
 
@@ -133,7 +134,8 @@ npm run test:e2e          # build + Playwright E2E（首次需 npx playwright in
   { "trigger": "command", "match": "sudo make me a sandwich", "output": "[OK] 三明治已加入扫描队列。" },
   { "trigger": "arg", "var": "username", "match": "root", "output": "[!] root 正在午睡，请勿打扰。" },
   { "trigger": "repeat", "count": 3, "output": "再点我就报警给隔壁猫" },
-  { "trigger": "click", "count": 5, "effect": "pink", "output": "已切换到 Hello Kitty 安全模式" }
+  { "trigger": "click", "match": "logo", "count": 5, "effect": "pink", "output": "已切换到 Hello Kitty 安全模式" },
+  { "trigger": "click", "match": "night-vision", "count": 3, "output": "[👽] 别闪了，眼睛疼。" }
 ]
 ```
 
@@ -142,7 +144,7 @@ npm run test:e2e          # build + Playwright E2E（首次需 npx playwright in
 | `command` | 整行输入精确匹配（忽略大小写，优先于普通命令） | `match` |
 | `arg` | 运行本脚本时变量值等于 `match` | `match`，`var`（默认第一个变量，通常 `target`；也可为 `--名称=值` 传入的变量如 `dict`） |
 | `repeat` | 同一目标连续运行本脚本 N 次 | `count`（或数字 `match`） |
-| `click` | 连点标题 Logo N 次 | `count`，`effect?: "pink"` |
+| `click` | 点击页面上 `data-egg="<match>"` 的元素 N 次（1.5s 内连续） | `match`（**必填**，目标元素名：`logo`=标题、`night-vision`=摄像头「夜视 3x」按钮、`record`=录音按钮、`close-prank`=弹窗/整蛊关闭按钮），`count`（默认 1；也可写成后缀 `night-vision-3x` / `logo-click-5`），`effect?: "pink"` |
 
 `output` 支持 `{{target}}` 等变量。兼容写法：`trigger` 直接写变量名（如 `"username"`、`"target"`）等同 `arg`；`repeat`/`click` 的次数也可写在 `match` 字符串里（如 `"same-target-3x"`、`"logo-click-5"`）；`{"trigger":"ui","match":"logo-click-N"}` 等同 `click`。`click` 的输出含 Kitty/粉 时默认启用粉色效果。
 

@@ -89,13 +89,16 @@ export function structuredEgg(e0: CwEgg, vars: VarSpec[], file: string): EasterE
   if (!e || !(e.trigger in KIND)) err(`trigger 必须为 command|arg|repeat|click，或变量名（${vars.map((v) => v.name).join('|')}），或 ui+logo-click-N`);
   if (typeof e.output !== 'string' || !e.output) err('缺少 output');
   const kind = KIND[e.trigger as keyof typeof KIND];
-  // click 的 match 为元素名 + 可选次数：logo-click-5 / night-vision-3x / close-prank
-  const cm = kind === 'click' && typeof e.match === 'string' ? /^([a-z][a-z0-9-]*?)(?:-click)?(?:-(\d+)x?)?$/i.exec(e.match) : null;
-  if (kind === 'click' && typeof e.match === 'string' && !cm) err('click 的 match 应为元素名，如 logo-click-5 / close-prank');
+  // click 的 match 必须指明目标元素（页面上的 data-egg 值），可带次数后缀：
+  //   {trigger:"click", match:"night-vision", count:3} / "night-vision-3x" / "logo-click-5" / "close-prank"
+  // 不会默认为 logo：缺少 match 直接报错
+  if (kind === 'click' && (typeof e.match !== 'string' || !e.match)) err('click 需要字符串 match 指明目标元素（data-egg），如 "logo" / "night-vision"');
+  const cm = kind === 'click' ? /^([a-z][a-z0-9]*(?:-(?!click(?:-\d+)?$|\d+x?$)[a-z0-9]+)*)(?:-click)?(?:-(\d+)x?)?$/i.exec(e.match as string) : null;
+  if (kind === 'click' && !cm) err('click 的 match 应为元素名（可加 -Nx / -click-N 次数后缀），如 logo-click-5 / night-vision-3x / close-prank');
   const n = e.count ?? (cm ? (cm[2] ? +cm[2] : 1) : undefined) ?? (typeof e.match === 'number' ? e.match : Number(/(\d+)/.exec(String(e.match ?? ''))?.[1]));
   if ((kind === 'command' || kind === 'arg') && (typeof e.match !== 'string' || !e.match)) err('command/arg 需要字符串 match');
   if ((kind === 'repeat' || kind === 'click') && !(n > 0)) err('repeat/click 需要正整数 count（或数字 match）');
-  return { kind, match: (kind === 'command' || kind === 'arg') ? (e.match as string) : undefined, element: kind === 'click' ? (cm?.[1] ?? 'logo') : undefined, count: n > 0 ? n : undefined,
+  return { kind, match: (kind === 'command' || kind === 'arg') ? (e.match as string) : undefined, element: kind === 'click' ? cm![1] : undefined, count: n > 0 ? n : undefined,
     varName: kind === 'arg' ? (e.var ?? vars[0]?.name ?? 'target') : undefined,
     output: e.output, effect: e.effect ?? (kind === 'click' && /kitty|粉/i.test(e.output) ? 'pink' : undefined), source: JSON.stringify(e0) };
 }
