@@ -71,8 +71,9 @@
   "easter_eggs": [
     {
       "trigger": "click",
-      "match": "logo-click-5",
-      "output": "[♥] 标题连点 5 次：橘猫说别闪了，眼睛疼。"
+      "match": "night-vision",
+      "count": 3,
+      "output": "[👽] 夜视切了 3 次，橘猫说：别闪了，眼睛疼。"
     },
     {
       "trigger": "command",

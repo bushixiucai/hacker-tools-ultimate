@@ -1,0 +1,162 @@
+[
+  {
+    "id": "site-01",
+    "category": "site",
+    "label": "一键顺着网线过去讲道理",
+    "duration": 3,
+    "stall": 97,
+    "twist": "网线太短，你被卡在了自家路由器里。先喝口水，冷静一下。"
+  },
+  {
+    "id": "site-02",
+    "category": "site",
+    "label": "一键让后台自己交出密码",
+    "duration": 4,
+    "stall": 99,
+    "twist": "后台回复：「密码是：好好学习」。说完它就下线了。"
+  },
+  {
+    "id": "site-03",
+    "category": "site",
+    "label": "一键把官网换成猫片",
+    "duration": 5,
+    "stall": 97,
+    "twist": "只换了你自己浏览器里的这一页。世界依旧，猫依旧可爱。"
+  },
+  {
+    "id": "crack-01",
+    "category": "crack",
+    "label": "一键破解你的拖延症",
+    "duration": 3,
+    "stall": 99,
+    "twist": "破解失败：拖延症已升级为「明天再说 Pro」。"
+  },
+  {
+    "id": "crack-02",
+    "category": "crack",
+    "label": "一键激活所有软件（含你自己）",
+    "duration": 4,
+    "stall": 97,
+    "twist": "你已被激活！副作用：今晚想早睡。"
+  },
+  {
+    "id": "crack-03",
+    "category": "crack",
+    "label": "一键把需求文档反编译成人话",
+    "duration": 5,
+    "stall": 99,
+    "twist": "反编译结果只有一句：「先做个能用的。」"
+  },
+  {
+    "id": "ctf-01",
+    "category": "ctf",
+    "label": "一键出 flag",
+    "duration": 3,
+    "stall": 97,
+    "twist": "flag{你其实可以自己做出来的}"
+  },
+  {
+    "id": "ctf-02",
+    "category": "ctf",
+    "label": "一键给出题人送温暖",
+    "duration": 4,
+    "stall": 99,
+    "twist": "出题人感动得又出了 10 道题。"
+  },
+  {
+    "id": "ctf-03",
+    "category": "ctf",
+    "label": "一键自动写 Writeup（AI）",
+    "duration": 5,
+    "stall": 97,
+    "twist": "Writeup 全文：「这题很简单，略。」"
+  },
+  {
+    "id": "wireless-01",
+    "category": "wireless",
+    "label": "一键蹭到宇宙 WiFi",
+    "duration": 3,
+    "stall": 99,
+    "twist": "已连接「宇宙_5G」，网速：一光年一字节。"
+  },
+  {
+    "id": "wireless-02",
+    "category": "wireless",
+    "label": "一键让路由器重启自己",
+    "duration": 4,
+    "stall": 97,
+    "twist": "路由器笑累了，决定休息 5 分钟（本页其实没碰它）。"
+  },
+  {
+    "id": "wireless-03",
+    "category": "wireless",
+    "label": "一键屏蔽老板的消息",
+    "duration": 5,
+    "stall": 99,
+    "twist": "结界失败：老板发来一条 60 秒语音。"
+  },
+  {
+    "id": "hardware-01",
+    "category": "hardware",
+    "label": "一键给 CPU 降温",
+    "duration": 3,
+    "stall": 97,
+    "twist": "CPU 表示：主要是你开了 87 个标签页。"
+  },
+  {
+    "id": "hardware-02",
+    "category": "hardware",
+    "label": "一键让打印机听话",
+    "duration": 4,
+    "stall": 99,
+    "twist": "打印机出纸了：一张写着「卡纸」的纸。"
+  },
+  {
+    "id": "hardware-03",
+    "category": "hardware",
+    "label": "一键接管卫星（摸鱼一号）",
+    "duration": 5,
+    "stall": 97,
+    "twist": "卫星给你家拍了张全景照：沙发还是那么乱。"
+  },
+  {
+    "id": "mystic-01",
+    "category": "mystic",
+    "label": "一键保佑服务器不宕机",
+    "duration": 3,
+    "stall": 99,
+    "twist": "服务器表示已收到，发版前请再拜一次。"
+  },
+  {
+    "id": "mystic-02",
+    "category": "mystic",
+    "label": "一键出货率 UP",
+    "duration": 4,
+    "stall": 97,
+    "twist": "欧气已注入。要是没出货，那是服务器在嫉妒你。"
+  },
+  {
+    "id": "mystic-03",
+    "category": "mystic",
+    "label": "一键让代码一次跑通",
+    "duration": 5,
+    "stall": 99,
+    "twist": "跑通了！因为你还没开始写。"
+  },
+  {
+    "id": "mystic-04",
+    "category": "mystic",
+    "label": "一键修复所有 bug（AI）",
+    "duration": 3,
+    "stall": 97,
+    "twist": "AI 建议：把 bug 改名叫 feature。"
+  },
+  {
+    "id": "mystic-05",
+    "category": "mystic",
+    "label": "一键让产品经理不改需求",
+    "duration": 4,
+    "stall": 99,
+    "twist": "需求已冻结。刚收到新需求：先解冻一下。"
+  }
+]
