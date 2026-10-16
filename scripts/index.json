@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "disclaimer": "纯属娱乐：所有数据均为虚构，本地模拟，不发出任何网络请求。",
+  "scripts": [
+    {
+      "id": "site-takeover",
+      "file": "site-takeover.json",
+      "title": "入侵任意网站拿后台"
+    },
+    {
+      "id": "password-bruteforce",
+      "file": "password-bruteforce.json",
+      "title": "密码爆破"
+    },
+    {
+      "id": "port-scan",
+      "file": "port-scan.json",
+      "title": "端口扫描"
+    },
+    {
+      "id": "camera-takeover",
+      "file": "camera-takeover.json",
+      "title": "摄像头接管"
+    },
+    {
+      "id": "satellite-trace",
+      "file": "satellite-trace.json",
+      "title": "卫星追踪"
+    },
+    {
+      "id": "ransom-prank",
+      "file": "ransom-prank.json",
+      "title": "勒索弹窗整蛊"
+    },
+    {
+      "id": "ddos-panel",
+      "file": "ddos-panel.json",
+      "title": "DDoS 面板"
+    }
+  ]
+}

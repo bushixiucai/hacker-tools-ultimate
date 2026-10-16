@@ -1,0 +1,45 @@
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#000;color:#33ff66;font-family:"Courier New",Consolas,monospace;overflow:hidden}
+#rain{position:fixed;inset:0;z-index:0}
+#banner{position:fixed;top:0;left:0;right:0;z-index:9999;background:#ffcc00;color:#000;font-weight:bold;text-align:center;padding:6px;font-size:16px;letter-spacing:2px;box-shadow:0 0 15px #ffcc00}
+main{position:relative;z-index:1;padding:44px 16px 16px;height:100%;display:flex;flex-direction:column}
+header{text-align:center}h1{margin:6px 0 0;font-size:34px;text-shadow:0 0 8px #33ff66}.sub{margin:2px;opacity:.7}
+.grid{flex:1;display:grid;grid-template-columns:1.1fr 1fr;gap:14px;min-height:0;margin-top:8px}
+.panel{background:rgba(0,15,0,.85);border:1px solid #33ff66;box-shadow:0 0 12px rgba(51,255,102,.4),inset 0 0 20px rgba(51,255,102,.08);display:flex;flex-direction:column;min-height:0;padding:8px;position:relative}
+.panel::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.25) 0 1px,transparent 1px 3px)}
+.ptitle{border-bottom:1px dashed #33ff66;padding-bottom:4px;margin-bottom:6px;font-weight:bold}
+.term-out{flex:1;overflow-y:auto;white-space:pre-wrap;font-size:14px;line-height:1.35}
+.inputline{display:flex;gap:6px;border-top:1px dashed #1a8033;padding-top:6px}
+.inputline input{flex:1;background:transparent;border:0;outline:0;color:#33ff66;font:inherit;caret-color:#33ff66}
+.quick{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+button{background:#001a00;color:#33ff66;border:1px solid #33ff66;font:inherit;padding:3px 10px;cursor:pointer;position:relative;z-index:2}button:hover{background:#33ff66;color:#000}
+.err{color:#ff4466}.warn{color:#ffcc00}.dim{opacity:.6}.ok{color:#aaffcc;font-weight:bold}
+#map{width:100%;height:auto;background:#000a00;border:1px solid #1a8033}
+#hops{font-size:12px;height:90px;overflow-y:auto;margin-top:6px}
+.bar{margin:4px 0;font-size:13px}.track{height:12px;border:1px solid #33ff66;margin-top:2px}.fill{height:100%;background:repeating-linear-gradient(45deg,#33ff66 0 6px,#1a8033 6px 12px);width:0}
+.popup{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center}.hidden{display:none!important}
+.box{border:3px solid #33ff66;background:#000;padding:30px 50px;text-align:center;box-shadow:0 0 40px #33ff66;animation:shake .3s 3}
+.big{font-size:52px;font-weight:bold}.psub{white-space:pre-line;max-width:640px;margin:16px 0;font-size:20px;min-height:28px}
+.glitch{position:relative;display:inline-block}
+.glitch::before,.glitch::after{content:attr(data-text);position:absolute;left:0;top:0;width:100%;overflow:hidden}
+.glitch::before{color:#ff00c8;animation:g1 2s infinite linear alternate;left:2px}
+.glitch::after{color:#00e5ff;animation:g2 1.5s infinite linear alternate;left:-2px}
+@keyframes g1{0%{clip-path:inset(10% 0 80% 0)}25%{clip-path:inset(60% 0 10% 0)}50%{clip-path:inset(30% 0 50% 0)}75%{clip-path:inset(80% 0 5% 0)}100%{clip-path:inset(5% 0 70% 0)}}
+@keyframes g2{0%{clip-path:inset(70% 0 10% 0)}33%{clip-path:inset(20% 0 60% 0)}66%{clip-path:inset(50% 0 30% 0)}100%{clip-path:inset(0 0 85% 0)}}
+@keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(-6px,3px)}75%{transform:translate(6px,-3px)}}
+@media(max-width:900px){.grid{grid-template-columns:1fr}body{overflow:auto}}
+
+#term-panel{min-height:0}
+@media(prefers-reduced-motion:reduce){.glitch::before,.glitch::after{animation:none;display:none}.box{animation:none}}
+
+body.kitty{--pink:#ff7ac8}body.kitty,body.kitty .panel,body.kitty #map{filter:hue-rotate(260deg) saturate(1.4)}body.kitty #banner{filter:none}
+h1.glitch{cursor:pointer;user-select:none}
+
+.sub a{color:#aaffcc}.mini{padding:0 8px;font-size:12px;margin-left:4px}
+.disclaimer{z-index:5000;background:rgba(0,0,0,.92)}
+.dbox{max-width:620px;text-align:left;animation:none}.dbox p{line-height:1.6;margin:10px 0}
+.dtitle{font-size:24px;font-weight:bold;color:#ffcc00;margin-bottom:8px}
+.accept{display:block;margin:18px auto 0;font-size:16px;padding:6px 18px}.accept:disabled{opacity:.5;cursor:not-allowed}
+body.immersive header{display:none}body.immersive main{padding-top:36px}
+body.fs header .sub{display:none}
+body.fs::after,body.immersive::after{content:"按 Esc 退出全屏";position:fixed;right:10px;bottom:8px;z-index:9998;font-size:12px;opacity:.8;background:#001a00;border:1px solid #1a8033;padding:2px 8px}
+.close-btn{min-width:40px;min-height:40px;font-size:16px}@media(max-width:600px){.close-btn{min-height:48px}}

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>黑客工具箱·搞怪版</title>
+</head>
+<body>
+  <canvas id="rain" aria-hidden="true"></canvas>
+  <div id="banner" role="note">⚠ 纯属娱乐 · 所有效果均为本地模拟 ⚠ 无任何真实网络请求</div>
+  <main>
+    <header>
+      <h1 class="glitch" data-text="黑客工具箱·搞怪版">黑客工具箱·搞怪版</h1>
+      <p class="sub">v0.1 // 超级专业（假）渗透平台 · <a href="#" id="open-disclaimer">免责声明</a> · <button type="button" id="fs-btn" class="mini">⛶ 全屏</button></p>
+    </header>
+    <div class="grid">
+      <section class="panel" id="term-panel"><div class="ptitle">root@toolbox:~# 终端</div></section>
+      <section class="panel"><div class="ptitle">全球追踪 // TRACE MAP</div>
+        <canvas id="map" width="640" height="320"></canvas>
+        <div id="hops"></div><div id="bars"></div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

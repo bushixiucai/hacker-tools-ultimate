@@ -1,0 +1,29 @@
+import { el, sleep } from '../effects';
+// PRD R16 / G1：首次访问免责声明；必须点「我已了解」才能继续；记忆于 localStorage（可一键清除，R10）
+export const DISCLAIMER_KEY = 'htb.disclaimer.v1';
+export const DISCLAIMER_TEXT = [
+  '本站所有效果均为本地动画，不会对任何网站、设备、网络产生影响。',
+  '所有"扫描 / 破解 / 入侵 / 追踪"都是虚构文本与随机数据，不发出任何网络请求，不收集任何数据。',
+  '请勿用于欺骗、恐吓他人或违法用途；整蛊请适度，别让朋友真的恐慌，玩完记得告诉 TA 这是假的。',
+];
+const accepted = () => { try { return localStorage.getItem(DISCLAIMER_KEY) === '1'; } catch { return false; } };
+
+/** 显示免责声明；force=true 时即使已接受也显示（再次打开）。返回 Promise，在用户确认后 resolve */
+export function showDisclaimer(force = false, skipDelayMs = 3000): Promise<void> {
+  if (!force && accepted()) return Promise.resolve();
+  document.querySelector('.disclaimer')?.remove();
+  const ov = el('div', 'popup disclaimer'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+  const box = el('div', 'box dbox');
+  box.append(el('div', 'dtitle', '⚠ 免责声明 · 纯属娱乐'));
+  for (const t of DISCLAIMER_TEXT) box.append(el('p', '', t));
+  const btn = el('button', 'accept', `我已了解（${Math.ceil(skipDelayMs / 1000)}）`) as HTMLButtonElement;
+  btn.disabled = true; box.append(btn); ov.append(box); document.body.append(ov);
+  return new Promise((res) => {
+    void (async () => {
+      for (let s = Math.ceil(skipDelayMs / 1000); s > 0; s--) { btn.textContent = `我已了解（${s}）`; await sleep(1000); }
+      await sleep(300); // 避免触发打开的那次 Enter 键直接“点中”按钮
+      btn.disabled = false; btn.textContent = '我已了解，开始玩'; btn.focus();
+    })();
+    btn.onclick = () => { try { localStorage.setItem(DISCLAIMER_KEY, '1'); } catch { /* 隐私模式忽略 */ } ov.remove(); res(); };
+  });
+}

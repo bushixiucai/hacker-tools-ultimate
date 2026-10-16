@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>黑客工具箱·搞怪版</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<canvas id="rain"></canvas>
+<div id="banner">⚠ 纯属娱乐 · 所有效果均为本地模拟 ⚠ 无任何真实网络请求</div>
+<main>
+ <header><h1 class="glitch" data-text="黑客工具箱·搞怪版">黑客工具箱·搞怪版</h1><p class="sub">v0.1 // 超级专业(假)渗透平台</p></header>
+ <div class="grid">
+  <section class="panel" id="termPanel"><div class="ptitle">root@toolbox:~# 终端</div>
+   <div id="term"></div>
+   <div class="inputline"><span class="prompt">root@toolbox:~#</span><input id="cmd" autocomplete="off" spellcheck="false" autofocus></div>
+   <div class="quick"><button data-c="help">help</button><button data-c="scan pentagon.gov">scan</button><button data-c="crack">crack</button><button data-c="hack nasa.gov">hack</button><button data-c="trace">trace</button><button data-c="clear">clear</button></div>
+  </section>
+  <section class="panel"><div class="ptitle">全球追踪 // TRACE MAP</div>
+   <canvas id="map" width="640" height="320"></canvas>
+   <div id="hops"></div>
+   <div id="bars"></div>
+  </section>
+ </div>
+</main>
+<div id="popup" class="hidden"><div class="box"><div class="big glitch" id="ptext" data-text="ACCESS GRANTED">ACCESS GRANTED</div><div id="psub"></div><button id="pclose">好吧</button></div></div>
+<script src="app.js"></script>
+</body></html>
