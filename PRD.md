@@ -2,11 +2,11 @@
 
 | 项目 | 内容 |
 |---|---|
-| 文档版本 | v0.5.2（新增「战报分享」与「拓展模块」） |
+| 文档版本 | v0.5.3（部署改为 GitHub Pages） |
 | 工作名 | `hacker-toolbox-prank`（正式品牌名与域名待定） |
 | 日期 | 2026-10-17 |
 | 负责人 | Tiger |
-| 产品形态 | 第一版为**纯前端静态网页**，部署于 **Cloudflare Pages** |
+| 产品形态 | 第一版为**纯前端静态网页**，部署于 **GitHub Pages**（`bushixiucai.github.io/hacker-tools-ultimate/`） |
 | 一句话定义 | 看起来像电影里的黑客神器，其实什么都不做的整蛊/娱乐模拟器 |
 
 > 注：文中「黑客工具箱·搞怪版」为描述性称呼，非最终品牌名。
@@ -28,6 +28,7 @@
 | v0.5.1 | 2026-10-17 | 新增 P0 核心玩法模块「目标渗透」（升级原 M1）：完整链路 输入网址 → 信息收集 → 漏洞扫描 → 漏洞利用 → 进后台 → 改数据 → 结尾反转；网址仅回显、零 DNS/HTTP、`connect-src 'none'` 不变；按域名字符串确定性生成假 IP/端口/指纹/漏洞（同 URL 同结果）；IP 仅三个文档保留网段；通用仿真 CMS 后台（用户/订单/公告），禁止仿冒真实站点 Logo/UI，篡改仅作用于本地假页；后台叠加水印「纯属娱乐 · 本地模拟」；终端链仿 whatweb+nmap / dirsearch / sqlmap / 哈希破解（display-only）；命令行与 payload 不可选中复制；URL 输入 XSS 转义；验收对齐测试方案（6 类 URL 零外发、不仿冒品牌）；分工：剧本文案写 `{{domain}}` 变量台词、前端做输入+种子 RNG+假后台原型、测试加两项验收。M2–M11 与一键神功仍有效，本模块为 v1 核心路径（与 M11 同为 P0，优先级并列靠前） |
 
 | v0.5.2 | 2026-10-17 | 目标渗透下新增 P0 子功能「战报分享」（5.M1.8：无后端，玩法+域名+种子+编辑数据压缩进 URL fragment，本地确定性重放；回放常驻横幅、反转不可跳过；OG 卡片固定文案不含域名；数据纯文本渲染；「我也来一次」；验收 R1–R4）；新增 §5.X「拓展模块」：P0 root shell、态势感知大屏（作战室入口），P1 内网横向、数据库拖库、钱包爆破（虚构链、非法校验位、禁真实地址格式、绝不显示私钥/助记词）、卫星/无人机接管，P2 工控/智慧城市、手机远控；共用底层与规则（本地地图禁在线瓦片、虚构城市、崩溃仅页面内且 Esc/点击退出、每模块通用 e2e）。§0 红线不变 |
+| v0.5.3 | 2026-10-17 | 部署决议（Tiger 2026-10-17）：改为 **GitHub Pages**，地址 `bushixiucai.github.io/hacker-tools-ultimate/`；仓库在 7 个剧本审完且首版验收通过后、于上线当日改为公开，公开前测试扫描仓库与 git 历史（密钥 / 真实邮箱）；Vite `base: './'` + hash 路由在子路径下无需改动；CSP（含 `connect-src 'none'`）以页面 `<meta>` 为准；GitHub Pages 不支持 `_headers`，改由页面内防嵌套跳出脚本补齐；GitHub Actions 推 `main` 自动部署，`build` / `check:scripts` / `check:names` / `test:e2e` / `check:dist-no-gags` 任一失败即不发布；构建时 `VITE_GAGS` 关闭；v1 仍零统计。§2.1 R3、R12a、§7.1、§7.6、附录 B 同步改写 |
 ---
 
 ## 0. 第一原则：外观照真工具，效果全模拟，笑点只留结尾反转
@@ -94,8 +95,8 @@
 - **R1 零目标请求**：用户输入的域名 / IP / URL / WiFi 名 / 手机号 / 地址等**只作为显示文本**，不做 DNS 解析、HTTP(S)、WebSocket、WebRTC、ping、`<img>`/favicon 预取、`fetch`、`sendBeacon`，不转为可点击链接。
 - **R2 零第三方请求**：字体、音效、视频素材、世界地图矢量数据、图标全部随静态包本地打包；不接 CDN、统计、广告、地图瓦片服务。
 - **R3 技术兜底**：
-  - Cloudflare Pages `_headers` 下发 CSP：`default-src 'self'; connect-src 'none'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; frame-src 'none'; form-action 'none'; base-uri 'self'`。
-  - 页面 `<meta http-equiv="Content-Security-Policy">` 同等策略兜底。
+  - 页面 `<meta http-equiv="Content-Security-Policy">` 下发 CSP：`default-src 'self'; connect-src 'none'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; frame-src 'none'; form-action 'none'; base-uri 'self'`（GitHub Pages 不支持 `public/_headers`，以 meta 为准）。
+  - 页面内防嵌套跳出脚本：检测到被 iframe 嵌入时顶出到顶层窗口（补齐 `_headers` 失效后失去的点击劫持防护）。
   - 禁用 `dns-prefetch / preconnect / prefetch`。
   - CI E2E（Playwright）跑完全部 MVP 模块，断言**除同源静态资源外请求数为 0**。
 
@@ -116,7 +117,7 @@
 - **R10**：无后端、无埋点、无 Cookie、无指纹；设置项（音效、主题）仅存 `localStorage`，可一键清除。
 - **R11**：用户输入不持久化（刷新即清），不上传；截图 / 录屏本地生成。
 - **R12 v1 零统计**：v1 不做任何统计（含自托管 PV、错误上报、性能上报），保持运行时零请求；统计以后再议，届时需单独评审。
-- **R12a**：Cloudflare 侧关闭 Web Analytics 自动注入、Zaraz、Rocket Loader、Email Obfuscation 等会注入脚本的功能（见 §7.1）。
+- **R12a**：v1 不接入任何分析 / 统计脚本（含自托管与第三方）；GitHub Pages 部署不依赖、不启用会注入脚本的托管侧功能；见 §7.1。
 
 ### 2.6 虚构数据声明
 - **R13**：所有"目标数据"均为随机生成或虚构：
@@ -165,7 +166,7 @@
 
 ### 2.10 赞助外链规则
 - 赞助入口**只用普通 `<a href>` 文字外链**（可配本地打包的图标/emoji），`rel="noopener noreferrer"`、`target="_blank"`、`referrerpolicy="no-referrer"`。
-- **点击前不发任何请求**：不嵌第三方脚本、iframe、按钮组件、跟踪像素、远程图片/二维码；不对外链做 `prefetch / preconnect / dns-prefetch`，不启用 Speculation Rules / Cloudflare 预取类功能；不加跳转统计参数之外的回调。
+- **点击前不发任何请求**：不嵌第三方脚本、iframe、按钮组件、跟踪像素、远程图片/二维码；不对外链做 `prefetch / preconnect / dns-prefetch`，不启用 Speculation Rules 或任何预取类功能；不加跳转统计参数之外的回调。
 - 位置：「关于」页与反转揭晓页底部，低调文字链；整蛊惊吓阶段不出现。
 - CSP 不放开任何第三方源（`<a>` 导航不需要放开）。
 
@@ -226,10 +227,10 @@
 ### 4.1 包含
 - 11 个假工具模块（§3.2，含 M11 首批 20 按钮）+ G1–G9 全局能力。
 - 合规兜底：CSP、零第三方、权限 API 禁用扫描、E2E 零请求断言、日志词表 lint。
-- Cloudflare Pages 部署流水线（§7.1）。
+- GitHub Pages 部署流水线（§7.1）。
 
 ### 4.2 不包含
-- 账号、后端、Pages Functions / Workers、数据库、广告、评论。
+- 账号、后端、服务端 Functions / Workers、数据库、广告、评论。
 - **任何统计**（v1 决议：零统计、零请求，以后再议）。
 - 第三方赞助组件（只允许 §2.10 的普通 `<a>` 外链）。
 - 真实品牌 Logo、真实 CVE、真实工具教程。
@@ -839,17 +840,16 @@ flowchart TD
 ## 7. 非功能需求
 
 ### 7.1 部署与架构（第一版）
-- **纯前端静态站点**：HTML / CSS / JS（建议 Vite + 轻量框架，或原生），无后端、无 Pages Functions、无 Workers、无数据库。
-- **部署目标：Cloudflare Pages**
-  - 仓库推送到 `main` 触发自动构建与部署；预览环境对应 PR。
-  - 构建命令示例：`npm ci && npm run build`；输出目录：`dist`。
-  - 通过仓库内 `public/_headers`（或 Pages 项目设置）下发 §2.1 CSP 与：
-    - `X-Content-Type-Options: nosniff`
-    - `Referrer-Policy: no-referrer`
-    - `Permissions-Policy: camera=(), microphone=(), geolocation=(), display-capture=()`
-  - **关闭** Cloudflare Web Analytics 注入、Zaraz、Rocket Loader、Email Obfuscation、Automatic HTTPS Rewrites 中会改写/注入脚本的选项，避免破坏「零第三方请求」与 CSP。
-  - Pages 项目名暂用工作名 `hacker-toolbox-prank`，默认地址 `hacker-toolbox-prank.pages.dev`（以实际可用为准）；正式品牌名 / 自定义域名待定（见 §8）。
-  - **v1 不开启任何统计**（含 Cloudflare Web Analytics）；赞助外链按 §2.10 实现，CSP 不新增第三方源。
+- **纯前端静态站点**：HTML / CSS / JS（建议 Vite + 轻量框架，或原生），无后端、无服务端 Functions、无 Workers、无数据库。
+- **部署目标：GitHub Pages**（Tiger 决议，2026-10-17）
+  - 地址：`https://bushixiucai.github.io/hacker-tools-ultimate/`（仓库 `bushixiucai/hacker-tools-ultimate`）。
+  - **公开时机**：仓库当前为私有；在 7 个剧本审完、首版验收通过后，于**上线当日**改为公开。公开前由测试扫描仓库与 git 历史，确认无密钥、无真实邮箱等敏感信息。
+  - **子路径兼容**：Vite `base: './'` + hash 路由，放在 `/hacker-tools-ultimate/` 下无需改 `base`。
+  - **构建与发布**：GitHub Actions 在推送到 `main` 时自动构建并部署到 `gh-pages`（或 `actions/deploy-pages`）。构建命令示例：`npm ci && npm run build`；输出目录：`dist`。构建时 **`VITE_GAGS` 关闭**，保证 `dist` 不夹带整蛊剧本源。
+  - **门禁**：下列任一失败则**不发布**：`build`、`check:scripts`、`check:names`、`test:e2e`、`check:dist-no-gags`。
+  - **CSP**：以页面 `<meta http-equiv="Content-Security-Policy">` 为准（含 `connect-src 'none'`，策略同 §2.1 R3）。GitHub Pages **不支持** `public/_headers`，响应头侧的 `X-Frame-Options` / CSP 帧策略无法下发；由页面内**防嵌套跳出脚本**补齐（见 R3）。
+  - **v1 不开启任何统计**（无应用层埋点、无第三方 Analytics）；赞助外链按 §2.10 实现，CSP 不新增第三方源。
+  - 正式品牌名 / 自定义域名待定（见 §8）。
   - 产物体积目标：首屏 JS+CSS gzip < 300KB；音效 / 视频素材按需懒加载。
 
 ### 7.2 移动端适配
@@ -875,13 +875,14 @@ flowchart TD
 - 源码扫描：禁止 `getUserMedia` 等敏感 API 字符串。
 
 ### 7.6 隐私
-- 无 Cookie、无第三方、无账号；隐私说明一页静态文案："我们看不到你，因为根本没有服务器在看（Cloudflare 只托管静态文件）。v1 不做任何统计。"
+- 无 Cookie、无第三方、无账号；隐私说明一页静态文案："我们看不到你，因为根本没有服务器在看（GitHub Pages 只托管静态文件）。v1 不做任何统计。"
 
 ---
 
 ## 8. 待 Tiger 决策的开放问题
 
-> 已关闭（v0.2）：第一版纯前端；部署 Cloudflare Pages；MVP 模块清单 §3.2；社工库不做。
+> 已关闭（v0.2）：第一版纯前端；MVP 模块清单 §3.2；社工库不做。
+> 已关闭（v0.5.3 Tiger）：部署改为 **GitHub Pages**（`bushixiucai.github.io/hacker-tools-ultimate/`）；仓库首版验收通过且 7 个剧本审完后于上线当日公开；公开前扫描密钥 / 真实邮箱；不再使用 Cloudflare Pages。
 > 已关闭（v0.3 总负责人拍板）：9:16 竖屏导出进 P1（G9 / §6.4）；勒索弹窗默认温和、电影级为可选开关且任何模式可一键关闭（§2.8 / M6）；v1 零统计（R12）；赞助仅普通 `<a>` 外链（§2.10）；命名规则与彩蛋结构化写法（§2.9 / §5）。
 
 1. **正式品牌名与域名（待定）**：当前工作名 `hacker-toolbox-prank`。对外品牌名（如「黑客工具箱·搞怪版」「假黑客模拟器」「Haxor Playground」）与是否绑定自定义域名，待总负责人确定。
@@ -905,10 +906,15 @@ P2（迭代）:
   成片增强(BGM/字幕) | 结局图鉴 | 多语言 | 离线 PWA | 更多整蛊小品
 ```
 
-## 附录 B · Cloudflare Pages 检查清单（上线前）
+## 附录 B · GitHub Pages 检查清单（上线前）
 
-- [ ] `public/_headers` 含 CSP / Permissions-Policy / nosniff
-- [ ] 关闭 Analytics / Zaraz / Rocket Loader / 预取类等注入（v1 零统计）
+- [ ] 页面 `<meta>` CSP 含 `connect-src 'none'` 等 §2.1 策略；`public/_headers` 可保留作参考但不依赖其生效
+- [ ] 防嵌套跳出脚本生效（被 iframe 嵌入时顶出）
+- [ ] GitHub Actions：推 `main` 自动部署；`build` / `check:scripts` / `check:names` / `test:e2e` / `check:dist-no-gags` 任一失败不发布
+- [ ] 构建 `VITE_GAGS` 关闭；`dist` 无整蛊剧本夹带
+- [ ] 站点在 `bushixiucai.github.io/hacker-tools-ultimate/` 子路径下页面与资源均可加载（`base: './'` + hash 路由）
+- [ ] v1 零统计：无应用层埋点、无第三方 Analytics
+- [ ] 仓库公开前：扫描仓库与 git 历史，无密钥 / 真实邮箱；公开时机 = 7 剧本审完 + 首版验收通过 + 上线当日
 - [ ] 词表 lint 通过（无真实 CVE / 字典名 / 组织名）
 - [ ] 勒索弹窗温和 / 电影级两种模式均可一键关闭
 - [ ] 赞助链接为普通 `<a>`，点击前零请求
