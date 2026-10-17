@@ -202,7 +202,7 @@ test('揭晓页：hash 状态可分享/刷新，内容只按文本渲染，再�
   expectClean(g);
 });
 
-test('M4 摄像头：假画面网格、夜视 3x 彩蛋、录音字幕、✕ 关闭整蛊直接揭晓，无权限请求', async ({ page }) => {
+test('M4 摄像头：假画面网格、夜视 3x 彩蛋、✕ 关闭整蛊直接揭晓，无权限请求', async ({ page }) => {
   const g = await guard(page); await acceptDisclaimerUpfront(page);
   await page.addInitScript(() => {
     const w = window as any; w.__perm = 0;
@@ -215,8 +215,6 @@ test('M4 摄像头：假画面网格、夜视 3x 彩蛋、录音字幕、✕ 关
   for (let i = 0; i < 3; i++) await page.click('.cam-nv');
   await expect(page.locator('.cam')).toHaveAttribute('data-nv-clicks', '3');
   await expect(page.locator('.term-out')).toContainText('眼睛疼');
-  await page.click('.cam-rec');
-  await expect(page.locator('.cam-sub')).toContainText('今天中午吃什么');
   const box = await page.locator('.cam-close').boundingBox();
   expect(box!.width).toBeGreaterThanOrEqual(40); expect(box!.height).toBeGreaterThanOrEqual(40);
   await page.click('.cam-close');

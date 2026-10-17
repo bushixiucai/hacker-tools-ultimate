@@ -2,7 +2,7 @@
 // 画面全部由 Canvas 程序生成（噪声 + 橘猫 + 时间戳 OSD）。一键关闭：「✕ 关闭整蛊」/ Esc / 双击画面。
 import { el } from '../effects';
 
-const CAMS = ['CAM-办公室鱼缸', 'CAM-楼道灭火器', 'CAM-隔壁老王阳台', 'CAM-茶水间'];
+const CAMS = ['CAM-办公室鱼缸', 'CAM-楼道灭火器', 'CAM-机房走廊', 'CAM-茶水间'];
 
 export class CameraModule {
   readonly root: HTMLDivElement;
@@ -30,7 +30,6 @@ export class CameraModule {
     mk('◀ 云台', () => (this.pan = Math.max(-40, this.pan - 15)), undefined, 'cam-left');
     mk('云台 ▶', () => (this.pan = Math.min(40, this.pan + 15)), undefined, 'cam-right');
     mk('🌙 夜视 3x', () => this.toggleNv(), 'night-vision', 'cam-nv');
-    mk('🎙 录音', () => { this.subtitle.textContent = '对方正在说：今天中午吃什么？'; }, 'record', 'cam-rec');
     this.root.append(close, grid, bar, this.subtitle);
   }
   private toggleNv() { this.nv = !this.nv; this.nvClicks++; this.root.classList.toggle('nv', this.nv); this.root.dataset.nvClicks = String(this.nvClicks); }
