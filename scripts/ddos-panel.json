@@ -73,7 +73,7 @@
     },
     {
       "trigger": "arg",
-      "match": "127.0.0.1",
+      "match": "localhost",
       "output": "[+] 对自己 DDoS：你感到了一阵莫名的温暖。"
     }
   ]

@@ -76,7 +76,7 @@
     },
     {
       "trigger": "arg",
-      "match": "127.0.0.1",
+      "match": "localhost",
       "output": "[+] 恭喜入侵本机！（你本来就有权限）"
     },
     {
