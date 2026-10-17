@@ -1,4 +1,6 @@
 import './style.css';
+import { frameBust } from './ui/frameBust';
+frameBust();
 import { initTheme, setTheme, currentTheme, isTheme, THEMES, type Theme } from './ui/theme';
 import { initSound, isMuted, setMuted } from './ui/sound';
 initTheme(); initSound();
