@@ -1,296 +1,255 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { test, expect, type Page, type Locator } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
-const INDEX = JSON.parse(readFileSync(new URL('../../scripts/index.json', import.meta.url), 'utf8')) as { scripts: { id: string }[] };
-
-const ORIGIN = `http://127.0.0.1:${process.env.E2E_PORT ?? 4321}`;
-const DISCLAIMER_KEY = 'htb.disclaimer.v1';
-
-/** 记录所有请求与控制台错误；拦截任何非同源请求（同时记为违规） */
-async function guard(page: Page) {
-  const requests: string[] = [], violations: string[] = [], errors: string[] = [];
-  await page.context().route('**/*', (route) => {
-    const url = route.request().url();
-    if (url.startsWith(ORIGIN + '/') || url.startsWith('data:') || url.startsWith('blob:')) return route.continue();
-    violations.push(url); return route.abort();
-  });
-  page.on('request', (r) => requests.push(r.url()));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  page.on('pageerror', (e) => errors.push(String(e)));
-  return { requests, violations, errors };
+const MODULES = ['site-takeover','port-scan','password-bruteforce','camera-takeover','satellite-trace','ransom-prank','ddos-panel','wifi-crack','hacker-typer','phone-control','wallet-search','situation-board'];
+test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('htb.disclaimer.v1', '1')); });
+async function open(page: Page, id: string) {
+  if (!(await page.locator('#terminal-page').isVisible())) await page.locator('#terminal-button').click();
+  await page.locator(`#module-nav [data-module="${id}"]`).click();
 }
-async function acceptDisclaimerUpfront(page: Page) {
-  await page.addInitScript((k) => localStorage.setItem(k, '1'), DISCLAIMER_KEY);
-}
-/** 免责胶囊可见且未被遮挡：位于视口右下角、不透明度 ≥ 0.6、其中心点命中胶囊自身 */
-async function expectSimPillVisible(page: Page) {
-  const pill = page.locator('#sim-pill');
-  await expect(pill).toBeVisible();
-  await expect(pill).toContainText('本地模拟');
-  const ok = await page.evaluate(() => {
-    const b = document.getElementById('sim-pill')!, r = b.getBoundingClientRect();
-    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    return { onTop: !!top && b.contains(top), opacity: Number(getComputedStyle(b).opacity), inView: r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth };
-  });
-  expect(ok.onTop, '免责胶囊被遮挡').toBe(true);
-  expect(ok.opacity).toBeGreaterThanOrEqual(0.6);
-  expect(ok.inView).toBe(true);
-}
-function expectClean(g: Awaited<ReturnType<typeof guard>>) {
-  expect(g.violations, '出现非同源请求').toEqual([]);
-  expect(g.requests.filter((u) => !u.startsWith(ORIGIN + '/') && !u.startsWith('data:') && !u.startsWith('blob:'))).toEqual([]);
-  expect(g.errors, '控制台错误').toEqual([]);
-}
-
-test('免责声明：首访必须接受、记忆、可通过链接与命令重新打开', async ({ page }) => {
-  const g = await guard(page);
-  await page.goto('/');
-  const modal = page.locator('.disclaimer');
-  await expect(modal).toBeVisible();
-  await expect(modal).toContainText('本地动画');
-  await expectSimPillVisible(page);
-  const btn = modal.locator('button.accept');
-  await expect(btn).toBeEnabled();                        // 新版免责声明不再强制等待 3 秒
-  await btn.click();
-  await expect(modal).toHaveCount(0);
-  expect(await page.evaluate((k) => localStorage.getItem(k), DISCLAIMER_KEY)).toBe('1');
-  await page.reload();
-  await page.waitForTimeout(500);
-  await expect(page.locator('.disclaimer')).toHaveCount(0);   // 已记忆
-  await page.goto('/#/tool');
-  await page.click('#open-disclaimer');                       // 链接重新打开
-  await expect(page.locator('.disclaimer')).toBeVisible();
-  await page.locator('.disclaimer button.accept').click();
-  await page.locator('.inputline input').fill('disclaimer');  // 命令重新打开
-  // 新版免责声明打开即聚焦「我已了解」；真实 Enter 会在同一按键周期内直接确认，
-  // 这里用合成 keydown 只验证命令分发，避免把“立即确认”误判为未打开
-  await page.locator('.inputline input').dispatchEvent('keydown', { key: 'Enter' });
-  await expect(page.locator('.disclaimer')).toBeVisible();
-  await page.locator('.disclaimer button.accept').click();
-  await expect(page.locator('.disclaimer')).toHaveCount(0);
-  expectClean(g);
-});
-
-test('免责胶囊：常驻右下角，点击可重新打开免责声明', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page);
-  await page.goto('/');
-  await expectSimPillVisible(page);
-  await page.click('#sim-pill');
-  await expect(page.locator('.disclaimer')).toBeVisible();
-  await page.locator('.disclaimer button.accept').click();
-  await expect(page.locator('.disclaimer')).toHaveCount(0);
-  expectClean(g);
-});
-
-test('全屏：按钮/命令切换，Esc 退出，免责胶囊始终可见', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page);
-  await page.goto('/');
-  await page.click('#fs-btn');
-  await expect.poll(() => page.evaluate(() => !!document.fullscreenElement || document.body.classList.contains('immersive'))).toBe(true);
-  await expectSimPillVisible(page);
-  await page.keyboard.press('Escape');
-  await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()); // headless 中 Esc 未必退出原生全屏
-  await expect.poll(() => page.evaluate(() => !!document.fullscreenElement || document.body.classList.contains('immersive'))).toBe(false);
-  // 降级路径：禁用 Fullscreen API 后应进入沉浸模式，Esc 退出
-  await page.evaluate(() => { (document.documentElement as any).requestFullscreen = () => Promise.reject(new Error('nope')); });
-  await page.click('[data-nav="tool"]');
-  await page.locator('.inputline input').fill('fullscreen'); await page.keyboard.press('Enter');
-  await expect(page.locator('body')).toHaveClass(/immersive/);
-  await expectSimPillVisible(page);
-  await page.keyboard.press('Escape');
-  await expect(page.locator('body')).not.toHaveClass(/immersive/);
-  expectClean(g);
-});
-
-test('弹窗可用 Esc / 双击 关闭，且关闭前必经揭晓', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page);
-  await page.goto('/#/tool');
-  await page.waitForFunction(() => !document.querySelector('.inputline input')?.hasAttribute('disabled'));
-  // 用最短的脚本触发揭晓弹窗
-  const ids = (await page.locator('body').getAttribute('data-scripts'))!.split(',');
-  await page.locator('.inputline input').fill(ids[0]); await page.keyboard.press('Enter');
-  const pop = page.locator('.popup:not(.disclaimer)');
-  await expect(pop).toBeVisible({ timeout: 90_000 });
-  await expectSimPillVisible(page);
-  await page.keyboard.press('Escape');                       // 惊吓阶段 → 先揭晓
-  await expect(pop.locator('.psub')).not.toHaveText('正在注入载荷……');
-  const vp = page.viewportSize()!;
-  await page.mouse.dblclick(10, vp.height - 10);              // 双击遮罩（避开右下角免责胶囊）关闭
-  await expect(pop).toHaveCount(0);
-  expectClean(g);
-});
-
-test.describe('每个已注册脚本跑到结尾', () => {
-  // 用例按 index.json 生成；另有一条用例断言页面实际注册的脚本与之一致
-  const ids = INDEX.scripts.map((s) => s.id);
-  for (const id of ids) {
-    test(`autorun ${id}`, async ({ page }) => {
-      const g = await guard(page); await acceptDisclaimerUpfront(page);
-      await page.goto(`/#autorun=${encodeURIComponent(id)}`);
-      const registered = (await page.locator('body').getAttribute('data-scripts'))!.split(',');
-      expect(registered).toContain(id);
-      await expect(page.locator('.popup:not(.disclaimer)')).toBeVisible({ timeout: 90_000 });
-      await expectSimPillVisible(page);                        // 弹窗中免责胶囊仍可见
-      // 新版交互模块：site-takeover 虚拟浏览器 / ransom-prank 勒索警报需要手动收尾
-      if (id === 'site-takeover' || id === 'ransom-prank') {
-        const finish = id === 'site-takeover' ? page.locator('.vb-finish-btn') : page.locator('.ransom-esc-btn').first();
-        await expect(finish).toBeVisible({ timeout: 30_000 });
-        await finish.click();
-      }
-      await expect(page.locator('body')).toHaveAttribute('data-autorun-done', '1', { timeout: 30_000 });
-      await expect(page.locator('.term-out')).toContainText('[揭晓]');
-      // G6：结束后进入统一揭晓页
-      await expect(page).toHaveURL(/#\/reveal\//);
-      await expect(page.locator('#view-reveal')).toBeVisible();
-      await expect(page.locator('#reveal-title')).not.toHaveText('');
-      await expect(page.locator('#view-reveal .reveal-note')).toContainText('本地模拟');
-      await expectSimPillVisible(page);
-      expectClean(g);
-    });
+async function setFields(page: Page, params: Record<string,string>) {
+  for (const [name, value] of Object.entries(params)) {
+    const input = page.locator(`#module-form [name="${name}"]`);
+    const details = input.locator('xpath=ancestor::details');
+    if (await details.count()) await details.evaluate(node => (node as HTMLDetailsElement).open = true);
+    if (await input.evaluate(node => node.tagName === 'SELECT')) await input.selectOption(value); else await input.fill(value);
   }
-  test('页面注册的脚本与 index.json 一致', async ({ page }) => {
-    await acceptDisclaimerUpfront(page); await page.goto('/');
-    expect((await page.locator('body').getAttribute('data-scripts'))!.split(',')).toEqual(ids);
+}
+async function run(page: Page, id: string, target = 'cedar.example', params: Record<string,string> = {}) {
+  await open(page,id);
+  const input = page.locator('#module-form [name=target]'); if (await input.count()) await input.fill(target);
+  await setFields(page,params);
+  const before = await page.locator('#task-list [data-task-id]').count();
+  await page.locator('#module-form button[type=submit]').click();
+  await expect(page.locator('#task-list [data-task-id]')).toHaveCount(before+1);
+  return page.locator('#task-list [data-task-id]').first();
+}
+async function choice(page: Page, value: string) {
+  const input = page.getByRole('textbox',{name:'终端输入'});
+  await expect(page.locator('#choice-panel button').first()).toBeVisible();
+  await input.fill(`select ${value}`); await input.press('Enter');
+}
+async function done(task: Locator) { await expect(task).toContainText('完成',{timeout:20_000}); }
+async function cleanPage(page: Page) {
+  const errors: string[]=[]; page.on('pageerror',error=>errors.push(error.message));
+  const external: string[]=[];
+  await page.route('**/*',route=> {
+    const url=new URL(route.request().url());
+    if (url.hostname==='127.0.0.1'||url.protocol==='data:'||url.protocol==='blob:') return route.continue();
+    external.push(url.href); return route.abort();
   });
-});
+  return () => { expect(errors).toEqual([]); expect(external).toEqual([]); };
+}
 
-const autoDismiss = (page: Page) => page.addInitScript(() => document.addEventListener('DOMContentLoaded', () => { document.body.dataset.autoDismiss = '1'; }));
-
-test('首页宫格：7 张卡片、整蛊类标签、点击卡片启动剧本并到达揭晓页', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page); await autoDismiss(page);
+test('Original visual structure has twelve independent entry cards and no shared target bar',async({page})=>{
   await page.goto('/');
-  await expect(page.locator('#view-home')).toBeVisible();
-  const cards = page.locator('#cards .card');
-  await expect(cards).toHaveCount(INDEX.scripts.length);
-  for (const sc of INDEX.scripts) await expect(page.locator(`.card[data-script="${sc.id}"]`)).toBeVisible();
-  await expect(page.locator('.card[data-script="camera-takeover"] .tag')).toHaveText('整蛊类');
-  await expectSimPillVisible(page);
-  await page.locator('.card[data-script="port-scan"]').click();
-  await expect(page.locator('#view-tool')).toBeVisible();
-  await expect(page).toHaveURL(/#\/reveal\//, { timeout: 90_000 });
-  await expect(page.locator('#reveal-tool')).toHaveText('端口扫描');
-  await page.click('#reveal-home');
-  await expect(page.locator('#view-home')).toBeVisible();
-  expectClean(g);
+  await expect(page.locator('#rain')).toBeVisible();
+  await expect(page.locator('.classic-header h1.glitch')).toHaveText('黑客工具箱');
+  await expect(page.locator('#cards [data-module]')).toHaveCount(12);
+  await expect(page.locator('.sidebar,#target-select,#target-form')).toHaveCount(0);
+  await expect(page.locator('#quick-actions [data-quick]')).toHaveCount(20);
+  await page.locator('#cards [data-module="port-scan"]').click();
+  await expect(page.locator('#module-form [name=target]')).toHaveValue('');
+  await expect(page.locator('#task-list [data-task-id]')).toHaveCount(0);
+  const left=await page.locator('.terminal-column').boundingBox(),right=await page.locator('.operation-column').boundingBox();
+  expect(left).toBeTruthy();expect(right).toBeTruthy();expect(right!.x).toBeGreaterThanOrEqual(left!.x+left!.width-1);
+  await page.screenshot({path:'../output/playwright/desktop-terminal.png',fullPage:true});
 });
 
-test('关于页：赞助入口为无 href 占位，页面无任何外部链接', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page);
-  await page.goto('/#/about');
-  await expect(page.locator('#view-about')).toBeVisible();
-  const sp = page.locator('#view-about a.sponsor');
-  await expect(sp).toHaveCount(1);
-  expect(await sp.getAttribute('href')).toBeNull();
-  // 全站当前没有任何外部 <a>；将来加入时必须带 noopener noreferrer + no-referrer，且只在关于/揭晓页
-  const ext = await page.$$eval('a[href^="http"]', (as) => as.map((a) => ({ rel: a.getAttribute('rel'), rp: a.getAttribute('referrerpolicy'), inAllowed: !!a.closest('#view-about,#view-reveal') })));
-  for (const a of ext) { expect(a.inAllowed).toBe(true); expect(a.rel).toContain('noopener'); expect(a.rp).toBe('no-referrer'); }
-  await page.click('#reset-settings');
-  await expect(page.locator('#reset-msg')).toContainText('已清除');
-  await expectSimPillVisible(page);
-  expectClean(g);
+test('Empty targets and invalid ranges are rejected without task mutation; scan report is inspectable',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');await open(page,'port-scan');
+  await page.locator('#module-form button[type=submit]').click();await expect(page.locator('#form-errors')).not.toBeEmpty();
+  await page.locator('#module-form [name=target]').fill('cedar.example');await setFields(page,{preset:'custom',ports:'0,65536'});
+  await page.locator('#module-form button[type=submit]').click();await expect(page.locator('#task-list [data-task-id]')).toHaveCount(0);
+  await setFields(page,{ports:'22,443,65000'});await page.locator('#module-form button[type=submit]').click();
+  await done(page.locator('#task-list [data-task-id]').first());
+  await expect(page.locator('#module-detail')).toContainText('65000');await expect(page.locator('#module-detail')).toContainText('closed');
+  await expect(page.locator('#reveal-dialog')).toBeHidden();check();
 });
 
-test('揭晓页：hash 状态可分享/刷新，内容只按文本渲染，再玩一次/回首页', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page);
-  const st = { s: 'port-scan', n: '端口扫描', t: '<img src=x onerror=alert(1)>标题', b: '第一行\n第二行' };
-  const payload = Buffer.from(JSON.stringify(st)).toString('base64url');
-  await page.goto(`/#/reveal/${payload}`);
-  await expect(page.locator('#view-reveal')).toBeVisible();
-  await expect(page.locator('#reveal-title')).toHaveText(st.t);            // 以文本显示
-  await expect(page.locator('#reveal-title img')).toHaveCount(0);
-  await expect(page.locator('#view-reveal .sponsor')).toHaveCount(1);
-  await page.reload();
-  await expect(page.locator('#reveal-body')).toContainText('第二行');
-  await page.goto('/#/reveal/!!!garbage');
-  await expect(page.locator('#reveal-title')).toHaveText('你被骗啦 🤡');  // 非法 payload 兜底
-  await page.goto(`/#/reveal/${payload}`);
-  await page.click('#reveal-again');
-  await expect(page.locator('#view-tool')).toBeVisible();
-  await expect(page.locator('.term-out')).toContainText('Starting nmap', { timeout: 10_000 });
-  expectClean(g);
+test('Password audit fails causally and retry starts fresh without another tool prerequisite',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');
+  const failed=await run(page,'password-bruteforce','cedar.example',{username:'nobody',dictionary:'extended'});
+  await expect(failed).toContainText('账户响应不存在');
+  await page.locator('#new-run').click();await expect(page.locator('#module-form [name=target]')).toHaveValue('');
+  const success=await run(page,'password-bruteforce','cedar.example',{username:'admin',dictionary:'extended'});await done(success);
+  await expect(success).toContainText('匹配');await page.locator('#end-tool').click();await expect(page.locator('#reveal-dialog')).toBeVisible();check();
 });
 
-test('M4 摄像头：假画面网格、夜视 3x 彩蛋、✕ 关闭整蛊直接揭晓，无权限请求', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page);
-  await page.addInitScript(() => {
-    const w = window as any; w.__perm = 0;
-    if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => { w.__perm++; return Promise.reject(new Error('blocked')); };
+test('Pending choices survive tool switching while inputs and histories stay isolated',async({page})=>{
+  await page.goto('/');const phone=await run(page,'phone-control','device-7');await expect(page.locator('#choice-panel')).toContainText('确认设备');
+  await open(page,'port-scan');await expect(page.locator('#module-form [name=target]')).toHaveValue('');await expect(page.locator('#task-list [data-task-id]')).toHaveCount(0);
+  await open(page,'phone-control');await expect(page.locator('#choice-panel')).toContainText('确认设备');await expect(phone).toContainText('运行中');
+  await choice(page,'connect');await done(phone);
+  await open(page,'port-scan');const task=await run(page,'port-scan','other.example');await done(task);
+  await open(page,'phone-control');await expect(page.locator('#task-list [data-task-id]')).toHaveCount(1);
+});
+
+test('Website uses public metadata when readable, two choices, editable CMS and explicit ending',async({page})=>{
+  await page.route('https://cors-fixture.example.org/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<html lang="zh-CN"><head><title>青杉生活</title><meta name="description" content="日常用品与家居精选"></head><body><h1>青杉生活</h1></body></html>'}));
+  await page.goto('/');const task=await run(page,'site-takeover','https://cors-fixture.example.org');
+  await choice(page,'archive');await choice(page,'session');await choice(page,'admin');await choice(page,'session');await done(task);
+  await page.getByRole('button',{name:'进入后台',exact:true}).click();const browser=page.locator('dialog.classic-browser');await expect(browser).toBeVisible();
+  await expect(browser.getByLabel('站点标题')).toHaveValue('青杉生活');const announcement=browser.getByLabel('站点公告');const original=await announcement.inputValue();await announcement.fill('秋季新品现已发布');
+  await browser.getByRole('button',{name:'保存修改',exact:true}).click();await browser.getByRole('button',{name:'刷新前台',exact:true}).click();
+  await expect(browser).toContainText('秋季新品现已发布');await page.screenshot({path:'../output/playwright/cms-browser.png',fullPage:true});await expect(page.locator('#reveal-dialog')).toBeHidden();
+  await browser.getByRole('button',{name:'恢复原始内容',exact:true}).click();await browser.getByRole('button',{name:'刷新前台',exact:true}).click();await expect(browser).toContainText(original);
+  await browser.getByRole('button',{name:'完成演示',exact:true}).click();await expect(page.locator('#reveal-dialog')).toBeVisible();
+});
+
+test('Camera has four local videos, selected-channel controls and no device requests',async({page})=>{
+  const check=await cleanPage(page);await page.addInitScript(()=>{Object.defineProperty(window,'__deviceAccess',{value:0,writable:true});if(navigator.mediaDevices)navigator.mediaDevices.getUserMedia=()=>{(window as unknown as {__deviceAccess:number}).__deviceAccess++;return Promise.reject(new Error('Unexpected device access'));};});
+  await page.goto('/');await run(page,'camera-takeover','仓储东区');await choice(page,'0');
+  await expect(page.locator('.camera-grid video')).toHaveCount(4);await page.screenshot({path:'../output/playwright/camera-grid.png',fullPage:true});const video=page.locator('.camera-grid video').first();
+  await expect.poll(()=>video.evaluate((node:HTMLVideoElement)=>node.readyState)).toBeGreaterThanOrEqual(2);
+  await page.getByRole('button',{name:'下一通道',exact:true}).click();await page.getByRole('button',{name:'放大',exact:true}).click();
+  await page.getByRole('button',{name:/夜视/}).click();
+  expect(await page.evaluate(()=>(window as unknown as {__deviceAccess:number}).__deviceAccess)).toBe(0);
+  await page.locator('#end-tool').click();await expect(page.locator('#reveal-dialog')).toBeVisible();check();
+});
+
+test('Satellite requires coherent sampling then exposes continuous map levels',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');const task=await run(page,'satellite-trace','13800138000');
+  await choice(page,'stable');await choice(page,'confirm');await expect(page.locator('.shell-output')).toContainText('Precision threshold');
+  await choice(page,'sample');await choice(page,'confirm');await done(task);
+  for(const label of ['全球','城市','街区'])await page.getByRole('button',{name:label,exact:true}).click();check();
+});
+
+test('Traffic parameters affect response, pause/resume and graceful stop',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');const task=await run(page,'ddos-panel','edge.example',{nodes:'4',rate:'80'});
+  await expect(page.getByRole('button',{name:'应用参数',exact:true})).toBeVisible();await page.getByRole('button',{name:'暂停 / 恢复',exact:true}).click();
+  await page.getByRole('button',{name:'暂停 / 恢复',exact:true}).click();await page.getByRole('button',{name:'停止负载',exact:true}).click();await done(task);check();
+});
+
+test('Ransom requires confirmation and Escape restores and reveals immediately',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');await run(page,'ransom-prank','');await choice(page,'start');
+  await expect(page.getByRole('button',{name:/立即解除/})).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('#reveal-dialog')).toBeVisible();check();
+});
+
+test('WiFi wrong channel cannot progress, valid handshake and candidate set complete',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');const task=await run(page,'wifi-crack','Office');await choice(page,'ap-0');
+  const prompt=await page.locator('#choice-panel').innerText();const channel=prompt.match(/频道 (\d+) · 目标频道/)?.[1];expect(channel).toBeTruthy();
+  await choice(page,channel==='1'?'6':'1');await choice(page,'stable');await expect(page.locator('.shell-output')).toContainText('NO EAPOL');
+  await choice(page,channel!);await choice(page,'stable');await choice(page,'extended');await done(task);check();
+});
+
+test('Typer advances only with input and phone notes/settings keep actual state',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');await run(page,'hacker-typer','',{scene:'diagnostic'});
+  const metrics=page.getByTestId('typer-metrics');await expect(metrics).toBeVisible();const before=(await metrics.textContent())!;await page.waitForTimeout(700);await expect(metrics).toHaveText(before);
+  await page.getByRole('button',{name:'推进代码',exact:true}).click();await expect(metrics).not.toHaveText(before);
+  const phone=await run(page,'phone-control','device-9');await choice(page,'connect');await done(phone);
+  await page.getByRole('button',{name:/备忘录/}).click();await page.getByTestId('phone-note').fill('现场检查已完成');await page.getByRole('button',{name:'保存备忘录',exact:true}).click();
+  await expect(page.getByTestId('phone-note')).toHaveValue('现场检查已完成');check();
+});
+
+test('Wallet validates chain address and opens assets and confirmed transaction records',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');await open(page,'wallet-search');await page.locator('#module-form [name=target]').fill('bad-address');await page.locator('#module-form button[type=submit]').click();await expect(page.locator('#form-errors')).not.toBeEmpty();
+  const task=await run(page,'wallet-search','NVA-7F2A9C18',{strategy:'extended'});await choice(page,'run');await done(task);
+  await page.getByRole('button',{name:'交易记录',exact:true}).click();await expect(page.locator('#module-detail')).toContainText('已确认');await page.getByRole('button',{name:'资产',exact:true}).click();await expect(page.locator('#module-detail')).toContainText('Nova');check();
+});
+
+test('Board supports defense scene, filtering, focus and pause',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');await run(page,'situation-board','SEC-NORTH',{scenario:'defense'});
+  await expect(page.getByTestId('board-map')).toBeVisible();await page.getByTestId('board-filter').selectOption('high');await page.getByTestId('board-focus').selectOption('N2');
+  await page.getByRole('button',{name:'暂停推进',exact:true}).click();await page.getByRole('button',{name:'恢复推进',exact:true}).click();check();
+});
+
+test('Shell escapes user input and Ctrl+C cancels the actual waiting task',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');await run(page,'phone-control','device-11');
+  const input=page.getByRole('textbox',{name:'终端输入'});await input.fill('<img src=x onerror=alert(1)>');await input.press('Enter');
+  await expect(page.locator('.shell-output')).toContainText('<img src=x onerror=alert(1)>');await expect(page.locator('.shell-output img')).toHaveCount(0);
+  await input.press('Control+c');await expect(page.locator('#task-list [data-task-id]').first()).toContainText('已中断');await expect(page.locator('#choice-panel button')).toHaveCount(0);check();
+});
+
+for(const viewport of [{width:320,height:740},{width:390,height:844},{width:844,height:390}])test(`Mobile layout keeps all tools operable at ${viewport.width}x${viewport.height}`,async({page})=>{
+  await page.setViewportSize(viewport);await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/');
+  for(const id of MODULES){await open(page,id);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),id).toBe(true);await expect(page.locator('#module-form button[type=submit]')).toBeVisible();}
+  await done(await run(page,'port-scan','mobile.example',{preset:'custom',ports:'22,443'}));
+  const phone=await run(page,'phone-control','mobile-device');await choice(page,'connect');await done(phone);await page.screenshot({path:`../output/playwright/phone-home-${viewport.width}.png`,fullPage:true});
+  await page.getByRole('button',{name:/备忘录/}).click();await page.getByTestId('phone-note').fill('移动端检查');await page.getByRole('button',{name:'保存备忘录',exact:true}).click();await expect(page.getByTestId('phone-note')).toHaveValue('移动端检查');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  const pill=page.locator('#sim-pill');await expect(pill).toBeVisible();expect(await pill.evaluate(node=>{const r=node.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight;})).toBe(true);
+  await page.screenshot({path:`../output/playwright/mobile-${viewport.width}.png`,fullPage:true});
+});
+
+test('First visit disclosure can be accepted and reopened',async({page})=>{
+  await page.addInitScript(()=>localStorage.removeItem('htb.disclaimer.v1'));await page.goto('/');await expect(page.locator('.disclaimer')).toBeVisible();await page.locator('.disclaimer button.accept').click();await expect(page.locator('.disclaimer')).toHaveCount(0);await page.locator('#sim-pill').click();await expect(page.locator('.disclaimer')).toBeVisible();
+});
+
+test('Report image exports and finite replay is independent of target network reads',async({page})=>{
+  await page.goto('/');await done(await run(page,'port-scan','report.example',{preset:'custom',ports:'22,443'}));
+  const downloaded=page.waitForEvent('download');await page.locator('#share-image').click();const download=await downloaded;expect(download.suggestedFilename()).toMatch(/\.png$/);const image=await readFile((await download.path())!);expect(image.length).toBeGreaterThan(5000);expect(image.subarray(0,8).toString('hex')).toBe('89504e470d0a1a0a');
+  await page.locator('#share-link').click();const link=await page.getByRole('textbox',{name:'回放链接'}).inputValue();expect(link).toContain('#/replay/');
+  const external:string[]=[];await page.route('**/*',route=>{const url=new URL(route.request().url());if(url.hostname==='127.0.0.1'||['blob:','data:'].includes(url.protocol))return route.continue();external.push(url.href);return route.abort();});
+  await page.goto(link);await expect(page.locator('#replay-page')).toContainText('过程回放');await page.getByRole('button',{name:'播放回放',exact:true}).click();await expect(page.locator('#replay-page')).toContainText('结果摘要',{timeout:15_000});await page.getByRole('button',{name:'结束回放',exact:true}).click();await expect(page.locator('#reveal-dialog')).toBeVisible();expect(external).toEqual([]);
+});
+
+test('Continuous report uses a snapshot and corrupt links offer recovery',async({page})=>{
+  await page.goto('/');await run(page,'situation-board','OPS',{scenario:'attack'});await expect(page.getByTestId('board-map')).toBeVisible();await page.locator('#share-link').click();const link=await page.getByRole('textbox',{name:'回放链接'}).inputValue();await page.goto(link);await expect(page.locator('#replay-page')).toContainText('成果报告');await page.getByRole('button',{name:'结束回放',exact:true}).click();await page.locator('#reveal-dialog button').click();
+  await page.goto('/#/replay/not-valid');await expect(page.locator('#replay-page .error')).not.toBeEmpty();await page.getByRole('button',{name:'返回首页',exact:true}).click();await expect(page.locator('#cards')).toBeVisible();
+});
+
+
+for (const behavior of ['denied', 'timeout']) test(`Website ${behavior} metadata silently follows its independent scenario`,async({page})=>{
+  await page.route(`https://metadata-${behavior}.example.org/**`,async route=>{
+    if(behavior==='denied') { await route.abort(); return; }
+    await new Promise(resolve=>setTimeout(resolve,5000));
+    await route.fulfill({status:200,contentType:'text/html',body:'<title>Delayed response</title>'}).catch(()=>{});
   });
-  await page.goto('/#/tool/camera-takeover');
-  await expect(page.locator('.cam-grid canvas')).toHaveCount(4, { timeout: 15_000 });
-  await expect(page.locator('#map-wrap')).toBeHidden();
-  await expectSimPillVisible(page);
-  for (let i = 0; i < 3; i++) await page.click('.cam-nv');
-  await expect(page.locator('.cam')).toHaveAttribute('data-nv-clicks', '3');
-  await expect(page.locator('.term-out')).toContainText('眼睛疼');
-  const box = await page.locator('.cam-close').boundingBox();
-  expect(box!.width).toBeGreaterThanOrEqual(40); expect(box!.height).toBeGreaterThanOrEqual(40);
-  await page.click('.cam-close');
-  const pop = page.locator('.popup:not(.disclaimer)');
-  await expect(pop).toBeVisible({ timeout: 5_000 });
-  await expect(pop.locator('.close-btn')).toHaveText('给橘猫喂罐头', { timeout: 5_000 });
-  await pop.locator('.close-btn').click();
-  await expect(page).toHaveURL(/#\/reveal\//);
-  await expect(page.locator('#map-wrap')).toBeAttached();
-  expect(await page.evaluate(() => (window as any).__perm)).toBe(0);
-  expectClean(g);
+  await page.goto('/');const task=await run(page,'site-takeover',`https://metadata-${behavior}.example.org`);
+  await choice(page,'api');await choice(page,'session');await done(task);
+  await expect(page.locator('#form-errors')).toBeEmpty();await expect(page.locator('.shell-output')).not.toContainText(/降级|读取失败|fallback/i);
+  await page.getByRole('button',{name:'进入后台',exact:true}).click();await expect(page.locator('dialog.classic-browser')).toBeVisible();
 });
 
-test('主题：三套主题切换、命令切换、刷新后保持', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page);
-  await page.goto('/');
-  const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
-  const fg = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--fg').trim());
-  expect(await theme()).toBe('matrix');
-  await page.click('[data-theme-choice="cyber"]');
-  expect(await theme()).toBe('cyber'); expect(await fg()).toBe('#ff2d95');
-  await page.click('[data-theme-choice="alert"]');
-  expect(await fg()).toBe('#ff3333');
-  await page.reload();
-  expect(await theme()).toBe('alert');
-  await page.goto('/#/tool');
-  await page.waitForFunction(() => !document.querySelector('.inputline input')?.hasAttribute('disabled'));
-  await page.locator('.inputline input').fill('theme matrix'); await page.keyboard.press('Enter');
-  await expect.poll(theme).toBe('matrix');
-  await expectSimPillVisible(page);
-  expectClean(g);
+for(const [id,input,params] of [
+  ['ddos-panel','stop.example',{nodes:'2',rate:'20'}],
+  ['hacker-typer','',{scene:'diagnostic'}],
+  ['situation-board','STOP-OPS',{scenario:'defense'}],
+] as const)test(`Global stop gracefully completes ${id} and fresh runs have no stale state`,async({page})=>{
+  await page.goto('/');const task=await run(page,id,input,params);await expect(page.locator('#stop-task')).toBeVisible();await page.locator('#stop-task').click();await done(task);
+  await expect(page.locator('#reveal-dialog')).toBeHidden();await page.locator('#new-run').click();
+  const target=page.locator('#module-form [name=target]');if(await target.count())await expect(target).toHaveValue('');
+  await page.locator('#end-tool').click();await expect(page.locator('#reveal-dialog')).toBeVisible();await page.locator('#reveal-dialog button').click();
 });
 
-test('音效：默认开启，用户手势后发声；静音开关生效并持久化', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page);
-  await page.goto('/#/tool');
-  const body = page.locator('body');
-  await expect(body).toHaveAttribute('data-sound', 'on');
-  await page.waitForFunction(() => !document.querySelector('.inputline input')?.hasAttribute('disabled'));
-  await page.locator('.inputline input').click();                       // 用户手势解锁 AudioContext
-  await page.locator('.inputline input').fill('help'); await page.keyboard.press('Enter');
-  await page.locator('.inputline input').fill('trace'); await page.keyboard.press('Enter');
-  await expect.poll(async () => Number(await body.getAttribute('data-sfx-count')), { timeout: 15_000 }).toBeGreaterThan(0);
-  await page.click('#sound-btn');
-  await expect(body).toHaveAttribute('data-sound', 'off');
-  await expect(page.locator('#sound-btn')).toContainText('静音');
-  const before = Number(await body.getAttribute('data-sfx-count'));
-  await page.locator('.inputline input').fill('trace'); await page.keyboard.press('Enter');
-  await page.waitForFunction(() => !document.querySelector('.inputline input')?.hasAttribute('disabled'), null, { timeout: 15_000 });
-  expect(Number(await body.getAttribute('data-sfx-count'))).toBe(before);  // 静音后不再发声
-  await page.reload();
-  await expect(body).toHaveAttribute('data-sound', 'off');
-  expectClean(g);
+test('Ending a pending tool cancels its choice and permits a clean subsequent session',async({page})=>{
+  await page.goto('/');const old=await run(page,'phone-control','old-device');await expect(page.locator('#choice-panel button')).not.toHaveCount(0);
+  await page.locator('#end-tool').click();await expect(page.locator('#reveal-dialog')).toBeVisible();await page.locator('#reveal-dialog button').click();
+  await expect(old).toContainText('已中断');await expect(page.locator('#choice-panel button')).toHaveCount(0);await expect(page.locator('#module-form [name=target]')).toHaveValue('');
+  const fresh=await run(page,'phone-control','new-device');await choice(page,'connect');await done(fresh);await expect(page.getByTestId('phone-screen')).toContainText('09:41');
 });
 
-// ---- M11 一键神功：默认构建中不存在（完整用例见 e2e-gags/，针对 VITE_GAGS=1 构建）----
-test('一键神功：默认构建不含宫格', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page);
-  await page.goto('/#gags-preview');
-  await expect(page.locator('#view-home .hero')).toBeVisible();
-  await expect(page.locator('#gags')).toHaveCount(0);
-  await expect(page.locator('.gag-btn')).toHaveCount(0);
-  expect(g.requests.some((u) => /gagsData/.test(u))).toBe(false);
-  expectClean(g);
+test('Ended camera sessions release media and do not restart on return',async({page})=>{
+  await page.goto('/');await run(page,'camera-takeover','camera-closed');await choice(page,'0');await expect(page.locator('.camera-grid video')).toHaveCount(4);
+  await page.locator('#end-tool').click();await page.locator('#reveal-dialog button').click();await expect(page.locator('#module-detail video')).toHaveCount(0);
+  await open(page,'port-scan');await open(page,'camera-takeover');await expect(page.locator('#module-detail video')).toHaveCount(0);await expect(page.locator('#module-detail')).toContainText('会话已结束');
 });
 
-test('关于页：纯文字致谢灵感来源（无链接）', async ({ page }) => {
-  await acceptDisclaimerUpfront(page); await page.goto('/#/about');
-  await expect(page.locator('#credits')).toContainText('GodOfHacker');
-  await expect(page.locator('#credits a')).toHaveCount(0);
+test('Background ransom restoration reveals when its tool is reopened',async({page})=>{
+  await page.goto('/');await run(page,'ransom-prank','');await choice(page,'start');await expect(page.getByRole('button',{name:/立即解除/})).toBeVisible();
+  await open(page,'port-scan');await expect(page.locator('#reveal-dialog')).toBeHidden();await expect(page.locator('#running-note')).toHaveText('',{timeout:15_000});
+  await open(page,'ransom-prank');await expect(page.locator('#reveal-dialog')).toBeVisible();await expect(page.locator('#reveal-dialog')).toContainText('没有读取、加密或修改');
+});
+
+test('Report Escape removes the dialog and allows another report to open',async({page})=>{
+  await page.goto('/');await done(await run(page,'port-scan','report-close.example',{preset:'custom',ports:'22'}));
+  await page.locator('.task-section summary').click();await page.getByRole('button',{name:'查看报告',exact:true}).click();await expect(page.locator('dialog.report-dialog')).toBeVisible();
+  await page.keyboard.press('Escape');await expect(page.locator('dialog.report-dialog')).toHaveCount(0);
+  await page.getByRole('button',{name:'查看报告',exact:true}).click();await expect(page.locator('dialog.report-dialog')).toHaveCount(1);await page.locator('dialog.report-dialog').getByRole('button',{name:'关闭',exact:true}).click();await expect(page.locator('dialog.report-dialog')).toHaveCount(0);
+});
+
+test('Replay completion automatically reveals and a second playback restarts the presentation',async({page})=>{
+  await page.goto('/');await done(await run(page,'port-scan','replay-auto.example',{preset:'custom',ports:'22'}));await page.locator('#share-link').click();const link=await page.getByRole('textbox',{name:'回放链接'}).inputValue();await page.goto(link);
+  await page.getByRole('button',{name:'播放回放',exact:true}).click();await expect(page.locator('#reveal-dialog')).toBeVisible({timeout:15_000});await page.locator('#reveal-dialog button').click();
+  await page.getByRole('button',{name:'播放回放',exact:true}).click();await expect(page.locator('#reveal-dialog')).toBeHidden();await expect(page.locator('#reveal-dialog')).toBeVisible({timeout:15_000});
+});
+
+test('Mobile CMS uses touch-sized controls in a readable native browser dialog',async({page})=>{
+  await page.setViewportSize({width:390,height:844});await page.goto('/');await run(page,'site-takeover','mobile-shop.example');await choice(page,'admin');await choice(page,'session');await page.getByRole('button',{name:'进入后台',exact:true}).click();
+  const dialog=page.locator('dialog.classic-browser');await expect(dialog).toBeVisible();
+  const dimensions=await dialog.locator('button').evaluateAll(buttons=>buttons.map(button=>({text:button.textContent,height:button.getBoundingClientRect().height,width:button.getBoundingClientRect().width})));
+  for(const control of dimensions){expect(control.height,control.text??'').toBeGreaterThanOrEqual(44);expect(control.width,control.text??'').toBeGreaterThanOrEqual(44);}
+  expect(await dialog.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true);await page.screenshot({path:'../output/playwright/cms-mobile-390.png',fullPage:true});
+  await dialog.getByRole('button',{name:'完成演示',exact:true}).click();await expect(page.locator('#reveal-dialog')).toBeVisible();
 });

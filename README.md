@@ -1,51 +1,49 @@
-# 黑客工具箱·搞怪版（hacker-toolbox-prank）
+# Hacker Toolbox
 
-> ## ⚠️ 纯属娱乐 · 所有效果均为本地模拟 · 零网络请求
-> 本项目是一个**假**黑客模拟器：所有"扫描 / 破解 / 入侵 / 追踪"都是本地动画与虚构文本。
-> - **不发出任何网络请求**（CSP `connect-src 'none'`，构建期静态检查 + E2E 断言零非同源请求）
-> - **不调用任何权限 API**（摄像头、麦克风、定位、剪贴板……），不收集任何数据，**无任何统计**
-> - **不教授任何真实攻击技术**；剧本中的机构名、字典名、CVE（`CVE-2077-xxxx`）全部为虚构/恶搞
-> - 请勿用于欺骗、恐吓他人或违法用途；整蛊请适度，玩完告诉对方这是假的
+A browser-based simulation toolkit with twelve independent workflows, realistic operational text, and an explicit final reveal. The original Matrix visual identity, top navigation, tool cards, and split terminal layout are preserved.
 
-需求文档：[`PRD.md`](PRD.md)（v0.3，当前）· 历史版本见 [`docs/`](docs/)。
+[Product requirements (Chinese)](PRD.md) · [Module authoring](docs/module-authoring.md) · [Live site](https://bushixiucai.github.io/hacker-tools-ultimate/)
 
-## 目录结构
+## Tools
 
-```
-.
-├── PRD.md                  # 产品需求文档（当前版本）
-├── app/                    # 正式前端（Vite + 原生 TypeScript，部署到 Cloudflare Pages）
-│   ├── src/effects/        # 特效库：终端、打字机、代码雨、进度条、故障弹窗、世界地图追踪
-│   ├── src/scenario/       # 剧本框架：schema、假数据、文案格式适配器、校验、播放器
-│   ├── src/ui/             # 免责声明、全屏
-│   ├── e2e/                # Playwright 端到端测试
-│   ├── scripts/            # 构建期检查（零网络 / 命名 lint / 剧本校验）
-│   └── README.md           # 详细开发文档（剧本格式、彩蛋写法等）
-├── scripts/                # 文案组剧本 JSON（index.json + 各工具剧本），构建期打包
-├── docs/                   # 历史 PRD、截图
-├── prototype/              # 最早的单文件原型（仅供参考，不参与构建）
-└── qa/                     # QA 文档
-```
+Website takeover, port scanning, credential auditing, camera access, satellite tracking, ransomware alert, traffic panel, WiFi analysis, keyboard-driven terminal, phone control, fictional wallet search, and attack/defense situational awareness. The homepage also contains twenty short, individually configured checks.
 
-## 开发 / 构建 / 测试
+All scanning, authentication, device, filesystem, wireless, wallet, and traffic activity is generated inside the page. No real attack or device operation is performed. Only website preparation may attempt bounded, credential-free reads of public metadata when browser CORS permits it. It silently uses deterministic generated material otherwise. No proxy or metadata backend is used.
 
-```bash
+Each tool owns its own runtime and recent reports. Switching tools keeps their work alive; a new run requires a new target. All run data is held in page memory and disappears on refresh. Theme and sound preferences are stored locally. No analytics or telemetry are included.
+
+## Development
+
+```sh
 cd app
-npm install
-npx playwright install chromium   # 首次运行 E2E 前
-npm run dev            # 本地开发
-npm run check          # 零网络检查 + 命名 lint（PRD §2.9）+ 剧本校验
-npm run build          # check + 类型检查 + 构建到 app/dist
-npm run test:e2e       # build + Playwright：跑完全部剧本、零非同源请求、无控制台错误、横幅常驻、免责声明、彩蛋、全屏、弹窗关闭
+npm ci
+npx playwright install chromium webkit
+npm run dev
+npm run typecheck
+npm run test:core
+npm run test:e2e
+npx playwright test -c playwright.mobile.config.ts
 ```
 
-## Cloudflare Pages 设置
+`npm run test:e2e` builds the production artifact, runs core lifecycle tests, desktop/mobile browser flows, and the twenty quick checks. The network-boundary checker permits the reviewed public-metadata adapter only; simulated modules cannot make target requests.
 
-| 项 | 值 |
-|---|---|
-| Root directory | `app` |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-| 环境变量 | `NODE_VERSION=20` |
+## Sharing
 
-`app/public/_headers` 下发 CSP 等响应头。按 PRD R12a，请在 Cloudflare 侧**关闭** Web Analytics 自动注入、Zaraz、Rocket Loader、Email Obfuscation、Speculation/预取类功能。
+Reports export as PNG images or versioned, compressed URL-fragment links without a backend. Finite workflows replay their key decisions and results before revealing the simulation. Continuous tools share a frozen result and a short presentation. Replay never reads the original target again, and unavailable source imagery is replaced by bundled material.
+
+## Architecture
+
+- `app/src/core/`: contracts, isolated runtime, deterministic profiles, registry, public metadata adapter.
+- `app/src/features/definitions/`: independent tool parameters and execution flows.
+- `app/src/workbench/`: terminal, specialized renderers, reports, quick checks, and responsive surfaces.
+- `app/public/media/`: offline footage, generated photos, world outline, and provenance notes.
+- `app/tests/`, `app/e2e/`, `app/e2e-gags/`: lifecycle, interaction, mobile, sharing, and boundary tests.
+- `scripts/`, `prototype/`, `docs/PRD*`: legacy content and prototypes retained for reference; the active application uses the v0.6 definitions.
+
+A module is discovered through its definition; it does not require editing the application shell or task scheduler. Complex views register separately. Code comments and extension examples use English; product copy uses Chinese with technical English where appropriate.
+
+## GitHub Pages
+
+The GitHub Actions workflow builds, checks, and tests the exact artifact before deploying it. Static output uses relative paths and hash routes, so the repository subpath works without a server. Security policy is declared in the HTML because GitHub Pages does not apply `_headers` files.
+
+Generated-media provenance is documented under `app/public/media/`. No real camera, phone, location, local file, private key, or financial account is accessed.

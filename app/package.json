@@ -1,7 +1,7 @@
 {
   "name": "hacker-toolbox-fun",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,9 +12,8 @@
     "check:scripts": "node scripts/check-scripts.mjs",
     "check:names": "node scripts/check-names.mjs",
     "check": "npm run check:no-network && npm run check:names && npm run check:scripts",
-    "test:e2e": "npm run build && npm run check:dist-no-gags && playwright test && npm run build:gags && playwright test -c playwright.gags.config.ts",
-    "check:dist-no-gags": "node scripts/check-dist-no-gags.mjs dist",
-    "build:gags": "VITE_GAGS=1 vite build --outDir dist-gags"
+    "test:e2e": "npm run build && npm run test:core && playwright test && playwright test -c playwright.gags.config.ts",
+    "test:core": "node --test tests/runtime.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

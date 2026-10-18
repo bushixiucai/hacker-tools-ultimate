@@ -1,0 +1,7 @@
+import type { ModuleDefinition } from '../../core/types';
+const definition: ModuleDefinition = {
+ id:'ransom-prank',code:'ransom',order:6,name:'勒索警报',category:'警报',view:'ransom',autoReveal:true,targetRequired:false,description:'启动终端警报，检查文件状态与恢复倒计时。',
+ fields:[{key:'mode',label:'警报强度',type:'select',default:'mild',options:[{value:'mild',label:'温和 · 最长 10 秒'},{value:'movie',label:'电影级 · 最长 15 秒'}]}],validate(params){return ['mild','movie'].includes(params.mode)?{}:{mode:'请选择强度'};},
+ async execute(ctx,params){const choice=await ctx.choose(params.mode==='movie'?'启用电影级警报？声音和画面更强烈，最长 15 秒，Esc 可立即解除。':'启动警报？最长 10 秒，Esc 或解除按钮可立即结束。',[{value:'start',label:'确认开始'},{value:'back',label:'取消'}]);if(choice!=='start')return '已取消启动。';const duration=params.mode==='movie'?15000:10000;const scene=['Documents','Pictures','Projects'][ctx.target.seed%3];ctx.target.data.ransom={deadline:Date.now()+duration,mode:params.mode,scene};ctx.target.locked=true;ctx.changed();ctx.log(`FILE INDEX ${scene} / ACCESS RESTRICTED`);
+ try{while(ctx.target.locked){const remaining=Number((ctx.target.data.ransom as {deadline:number}).deadline)-Date.now();if(remaining<=0)break;ctx.phase(`恢复倒计时 ${Math.ceil(remaining/1000)} 秒`,100*(1-remaining/duration));await ctx.wait(Math.min(250,remaining));}}finally{ctx.target.locked=false;ctx.changed();}ctx.log('ACCESS RESTORED / INTEGRITY VERIFIED');return '警报已解除，文件完整性检查通过。';}
+};export default definition;

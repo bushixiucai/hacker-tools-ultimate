@@ -9,3 +9,6 @@ blob-report/
 qa/pw/
 qa/*.png
 qa/*.log
+
+# Generated browser verification evidence stays local.
+/output/

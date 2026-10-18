@@ -2,8 +2,8 @@ import { el, sleep } from '../effects';
 // PRD R16 / G1：首次访问免责声明；必须点「我已了解」才能继续；记忆于 localStorage（可一键清除，R10）
 export const DISCLAIMER_KEY = 'htb.disclaimer.v1';
 export const DISCLAIMER_TEXT = [
-  '本站所有效果均为本地动画，不会对任何网站、设备、网络产生影响。',
-  '所有"扫描 / 破解 / 入侵 / 追踪"都是虚构文本与随机数据，不发出任何网络请求，不收集任何数据。',
+  '本产品用于娱乐模拟，不执行真实入侵、设备接管、文件加密或资金操作。',
+  '网站工具可能读取公开网页资料作为背景；扫描、破解、追踪及操作结果均由页面生成。',
   '请勿用于欺骗、恐吓他人或违法用途；整蛊请适度，别让朋友真的恐慌，玩完记得告诉 TA 这是假的。',
 ];
 const accepted = () => { try { return localStorage.getItem(DISCLAIMER_KEY) === '1'; } catch { return false; } };
@@ -16,7 +16,7 @@ export function showDisclaimer(force = false, skipDelayMs = 0): Promise<void> {
   const box = el('div', 'box dbox');
   box.append(el('div', 'dtitle', '⚠ 免责声明 · 纯属娱乐'));
   for (const t of DISCLAIMER_TEXT) box.append(el('p', '', t));
-  const btn = el('button', 'accept', '我已了解，开始玩') as HTMLButtonElement;
+  const btn = el('button', 'accept', '我已了解，进入工具') as HTMLButtonElement;
   box.append(btn); ov.append(box); document.body.append(ov);
   btn.focus();
   return new Promise((res) => {

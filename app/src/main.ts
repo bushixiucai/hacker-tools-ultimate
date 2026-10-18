@@ -1,293 +1,180 @@
 import './style.css';
+import './workbench/extra.css';
+import { Runtime, ValidationError } from './core/runtime';
+import { MODULES } from './core/registry';
+import type { ModuleDefinition, Params, Target, Task } from './core/types';
+import { Shell } from './workbench/shell';
+import { mountDetail } from './workbench/views';
+import { EXTRA_VIEWS } from './workbench/extraViews';
+import { mountQuickActions } from './workbench/quickActions';
+import { createReport, reportLink, readReport, exportReportImage, type Report } from './workbench/share';
+import { startCodeRain } from './effects/codeRain';
+import { sfx } from './effects/util';
 import { frameBust } from './ui/frameBust';
-if (frameBust()) throw new Error('framed: render blocked');
-import { initTheme, setTheme, currentTheme, isTheme, THEMES, type Theme } from './ui/theme';
-import { initSound, isMuted, setMuted } from './ui/sound';
-initTheme(); initSound();
-import { Terminal, WorldMap, startCodeRain, type LineKind } from './effects';
 import { showDisclaimer } from './ui/disclaimer';
-import { onFullscreenChange, toggleFullscreen } from './ui/fullscreen';
-import { parseRoute, replaceHash, showView } from './ui/router';
-import { CameraModule } from './modules/camera';
-import { VirtualBrowser } from './modules/virtualBrowser';
-import { RansomAlert } from './modules/ransomAlert';
-import { BUILTIN_EGGS } from './eggs.builtin';
-import { loadGags, renderGags, gagIds, runGag } from './ui/gags';
-import { decodeReveal, encodeReveal, renderReveal } from './ui/reveal';
-import { SCRIPTS, UNPARSED_EGGS, fakeIp, fill, runScenario, type ScenarioScript, type Vars } from './scenario';
+import { initSound, isMuted, setMuted } from './ui/sound';
+import { initTheme, setTheme, type Theme } from './ui/theme';
+import { toggleFullscreen } from './ui/fullscreen';
 
-startCodeRain(document.querySelector<HTMLCanvasElement>('#rain')!);
-document.querySelector('#sim-pill')?.addEventListener('click', () => showDisclaimer(true, 0));
-const map = new WorldMap(document.querySelector<HTMLCanvasElement>('#map')!, document.querySelector<HTMLElement>('#hops')!);
-const barsEl = document.querySelector<HTMLElement>('#bars')!;
-const panel = document.querySelector<HTMLElement>('#term-panel')!;
-const term = new Terminal(panel);
-const eggKind = (t: string): LineKind => (t.startsWith('[x]') ? 'err' : t.startsWith('[OK]') || t.startsWith('[+]') ? 'ok' : 'warn');
-const scriptEggs = SCRIPTS.flatMap((s) => (s.easterEggs ?? []).map((e) => ({ ...e, script: s.id })));
-const allEggs = [...scriptEggs, ...BUILTIN_EGGS.filter((b) => !scriptEggs.some((e) => e.kind === 'click' && e.element === b.element))];
+const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text?: string) => { const n = document.createElement(tag); n.className = cls; if (text !== undefined) n.textContent = text; return n; };
+const button = (text: string, action: () => void, cls = '') => { const b = el('button', cls, text); b.type = 'button'; b.onclick = action; return b; };
+interface ToolSession { module: ModuleDefinition; runtime: Runtime; shell: Shell; host: HTMLElement; draft: Params; input: string; revealed: Set<string> }
+const sessions = new Map<string, ToolSession>();
+let selected: ToolSession | undefined; let cleanupDetail: (() => void) | undefined; let detailKey = ''; let pageName = 'home'; let replayCleanup: (() => void) | undefined;
+const statuses = { running: '运行中', succeeded: '完成', failed: '需要调整', cancelled: '已中断' };
+const app = document.getElementById('app')!;
+const $ = (selector: string) => app.querySelector<HTMLElement>(selector)!;
 
-term.register(
-  { name: 'help', description: '显示帮助', run: ({ term: t }) => {
-    t.print('可用命令：', 'ok');
-    for (const c of t.commands()) t.print(`  ${(c.usage ?? c.name).padEnd(34)} ${c.description}`);
-    t.print('提示：以上全部为本地动画，不会访问任何网络。参数可用 --名称=值 指定（如 --dict=星座运势）。', 'warn');
-  } },
-  { name: 'clear', description: '清屏', run: ({ term: t }) => t.clear() },
-  { name: 'trace', description: '全球追踪 IP 跳点（假）', run: async ({ term: t }) => {
-    await t.type('[*] 启动全球追踪协议……');
-    const end = await map.trace(6, fakeIp, (i, ip, c, ms) => t.print(`  [hop ${i + 1}] ${ip} → ${c.name} (${ms}ms)`, 'dim'));
-    t.print(`[✔] 目标定位：${end.name}，坐标精确到他家猫的窝`, 'ok');
-    t.print('[i] 实际上什么都没追踪，全是随机生成的 :)', 'warn');
-  } },
-  { name: 'fullscreen', description: '切换全屏（Esc 退出）', run: () => toggleFullscreen() },
-  { name: 'theme', usage: 'theme [matrix|cyber|alert]', description: '切换主题（Matrix 绿 / 赛博紫粉 / 红黑警报）', run: ({ args, term: t }) => {
-    const order = Object.keys(THEMES) as Theme[];
-    const next = args[0] ?? order[(order.indexOf(currentTheme()) + 1) % order.length];
-    if (!isTheme(next)) return t.print(`未知主题：${next}。可选：${order.join(' / ')}`, 'err');
-    setTheme(next); t.print(`[*] 已切换到「${THEMES[next]}」次元。`, 'ok');
-  } },
-  { name: 'mute', usage: 'mute [on|off]', description: '静音开关（音效为本地合成）', run: ({ args, term: t }) => {
-    setMuted(args[0] ? args[0] !== 'off' : !isMuted()); t.print(isMuted() ? '[i] 已静音。' : '[i] 音效已开启（40%）。', 'dim');
-  } },
-  { name: 'disclaimer', description: '查看免责声明', run: () => showDisclaimer(true, 0) },
-  { name: 'whoami', description: '显示当前有效用户', run: ({ term: t }) => t.print('kali', 'ok') },
-  { name: 'id', description: '显示用户与组 ID', run: ({ term: t }) => t.print('uid=1000(kali) gid=1000(kali) groups=1000(kali),24(cdrom),27(sudo),100(users),106(netdev)', 'dim') },
-  { name: 'uname', usage: 'uname [-a]', description: '显示系统信息', run: ({ term: t }) => t.print('Linux kali 6.6.0-kali1-amd64 #1 SMP PREEMPT_DYNAMIC Kali 6.6.9-1kali1 (2026-10-17) x86_64 GNU/Linux', 'dim') },
-  { name: 'uptime', description: '显示系统开机时间与负载', run: ({ term: t }) => t.print(' 21:45:00 up 42 days,  3:14,  1 user,  load average: 0.12, 0.08, 0.02', 'dim') },
-  { name: 'hostname', description: '显示系统主机名', run: ({ term: t }) => t.print('toolbox-offensive', 'dim') },
-  { name: 'ls', usage: 'ls [-la]', description: '列出文件目录', run: ({ term: t }) => {
-    t.print('total 28', 'dim');
-    t.print('drwxr-xr-x 2 kali kali 4096 Oct 18 21:00 exploits', 'ok');
-    t.print('drwxr-xr-x 2 kali kali 4096 Oct 18 21:00 wordlists', 'ok');
-    t.print('drwxr-xr-x 2 kali kali 4096 Oct 18 21:00 loot', 'ok');
-    t.print('-rw-r--r-- 1 kali kali  342 Oct 18 21:00 targets.cfg');
-    t.print('-rw-r--r-- 1 kali kali  188 Oct 18 21:00 note.txt');
-    t.print('-rwxr-xr-x 1 kali kali 8192 Oct 18 21:00 offensive_deploy.sh', 'ok');
-  } },
-  { name: 'cat', usage: 'cat [file]', description: '查看文件内容', run: ({ args, term: t }) => {
-    const f = args[0] ?? 'note.txt';
-    if (f === 'note.txt') {
-      t.print('[TOP SECRET MEMO]', 'warn');
-      t.print('1. 目标渗透与网页篡改完全为前端虚拟沙盒。');
-      t.print('2. 过程保持 100% 严肃写实，不可提前剧透。');
-      t.print('3. 结尾反转必须让对方会心一笑。');
-    } else if (f === 'targets.cfg') {
-      t.print('TARGET_HOST="203.0.113.88"', 'dim');
-      t.print('GATEWAY="192.0.2.1"', 'dim');
-      t.print('SUBNET="192.0.2.0/24"', 'dim');
-    } else {
-      t.print(`cat: ${f}: No such file or directory`, 'err');
-    }
-  } },
-  { name: 'ps', description: '查看当前活跃进程', run: ({ term: t }) => {
-    t.print('  PID TTY          TIME CMD', 'dim');
-    t.print('    1 ?        00:00:03 systemd');
-    t.print('   88 ?        00:00:01 dbus-daemon');
-    t.print('  420 ?        00:00:00 kworker/u4:0-events_unbound');
-    t.print(' 1337 pts/0    00:00:01 zsh', 'ok');
-    t.print(' 1420 pts/0    00:00:02 msfconsole', 'warn');
-    t.print(' 1984 pts/0    00:00:00 ps');
-  } },
-  { name: 'ifconfig', description: '查看网络接口配置', run: ({ term: t }) => {
-    t.print('eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500', 'dim');
-    t.print('        inet 192.0.2.15  netmask 255.255.255.0  broadcast 192.0.2.255');
-    t.print('        ether 08:00:27:12:34:56  txqueuelen 1000  (Ethernet)');
-    t.print('');
-    t.print('wlan0mon: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500', 'dim');
-    t.print('        Mode: Monitor  Frequency: 2.437 GHz  txpower 20 dBm');
-    t.print('');
-    t.print('lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536', 'dim');
-    t.print('        inet 127.0.0.1  netmask 255.0.0.0');
-  } },
-  { name: 'ping', usage: 'ping [target]', description: '向目标发送 ICMP 探测包', run: async ({ args, term: t }) => {
-    const tgt = args[0] || '192.0.2.47';
-    t.print(`PING ${tgt} (${tgt}) 56(84) bytes of data.`, 'dim');
-    for (let i = 1; i <= 4; i++) {
-      await new Promise((r) => setTimeout(r, 600));
-      const ms = (14 + Math.random() * 8).toFixed(1);
-      t.print(`64 bytes from ${tgt}: icmp_seq=${i} ttl=56 time=${ms} ms`);
-    }
-    t.print(`--- ${tgt} ping statistics ---`, 'dim');
-    t.print('4 packets transmitted, 4 received, 0% packet loss, time 2404ms', 'ok');
-  } },
-
-  { name: 'eggs', hidden: true, description: '列出彩蛋（剧透）', run: ({ term: t }) => {
-    allEggs.forEach((e) => t.print(`  [${e.script}] ${e.source}`, 'dim'));
-    UNPARSED_EGGS.forEach((e) => t.print(`  [未解析] ${e}`, 'err'));
-  } },
-);
-
-/** 位置参数按脚本 vars 顺序映射；--k=v 形式为具名参数 */
-function buildVars(s: ScenarioScript, args: string[]): Vars {
-  const specs = s.vars ?? [{ name: 'target', default: s.defaultTarget ?? '目标' }];
-  const v: Vars = {}; const pos: string[] = [];
-  for (const a of args) { const m = /^--(\w+)=(.*)$/.exec(a); if (m) v[m[1]] = m[2]; else pos.push(a); }
-  specs.forEach((sp, i) => { v[sp.name] ??= pos[i] ?? sp.default; });
-  if (!s.vars && pos.length > 1) v.target = pos.join(' ');
-  return v;
+function showReveal(title: string, text: string) {
+  const dialog = document.getElementById('reveal-dialog') as HTMLDialogElement; document.getElementById('reveal-title')!.textContent = `${title} · 演示结束`; document.getElementById('reveal-text')!.textContent = text;
+  if (!dialog.open) dialog.showModal(); (dialog.querySelector('button') as HTMLButtonElement).focus(); sfx('reveal');
 }
-
-const repeatState = new Map<string, { target: string; n: number }>();
-for (const s of SCRIPTS) term.register({
-  name: s.id, usage: s.usage, description: s.description,
-  run: async ({ args }) => {
-    const vars = buildVars(s, args);
-    if (s.disclaimer) term.print(`※ ${s.disclaimer}`, 'dim');
-    for (const e of s.easterEggs ?? []) {
-      if (e.kind === 'arg' && e.varName && vars[e.varName]?.toLowerCase() === e.match?.toLowerCase()) term.print(fill(e.output, vars), eggKind(e.output));
-      if (e.kind === 'repeat') {
-        const st = repeatState.get(s.id), tgt = vars.target ?? '';
-        const n = st && st.target === tgt ? st.n + 1 : 1; repeatState.set(s.id, { target: tgt, n });
-        if (n >= (e.count ?? 3)) term.print(fill(e.output, vars), 'warn');
-      }
-    }
-    showView('tool');
-    // 模块专属画面：camera-takeover → 假监控网格（替换右侧地图）
-    const ctl = new AbortController(); let cam: CameraModule | undefined;
-    if (s.id === 'camera-takeover') {
-      cam = new CameraModule(() => ctl.abort());
-      document.querySelector('#map-wrap')!.classList.add('hidden');
-      document.querySelector('#side-title')!.textContent = '监控网格 // CAM GRID（本地生成，非真实摄像头）';
-      cam.mount(document.querySelector<HTMLElement>('#cam-slot')!);
-    }
-    let r;
-    try {
-      r = await runScenario(s, { term, map, barsEl, signal: ctl.signal }, vars);
-      // 真实展示篡改：若为 site-takeover，无缝唤起虚拟浏览器进行 Web 篡改与互动
-      if (s.id === 'site-takeover' && !ctl.signal.aborted) {
-        await new Promise<void>((res) => {
-          const vb = new VirtualBrowser({
-            target: vars.target || 'target-corp.example',
-            onFinish: () => res(),
-          });
-          vb.mount();
-        });
-      }
-      // 拟真勒索警报：若为 ransom-prank，呼出独立全屏红黑警报窗口
-      if (s.id === 'ransom-prank' && !ctl.signal.aborted) {
-        await new Promise<void>((res) => {
-          const ra = new RansomAlert({
-            onClose: () => res(),
-          });
-          ra.mount();
-        });
-      }
-    }
-    finally {
-      if (cam) { cam.unmount(); document.querySelector('#map-wrap')!.classList.remove('hidden'); document.querySelector('#side-title')!.textContent = '全球追踪 // TRACE MAP'; }
-    }
-    // G6：揭晓弹窗关闭后进入统一揭晓页（状态在 hash 中，可分享）
-    if (r) location.hash = '#/reveal/' + encodeReveal({ s: s.id, n: s.description, t: r.title, b: r.text, tg: args.length ? vars.target : undefined });
-  },
-});
-
-// 彩蛋：整行精确匹配的隐藏命令（优先于普通命令，如 `hack nasa`）
-term.interceptor = (raw, t) => {
-  const e = allEggs.find((x) => x.kind === 'command' && x.match?.toLowerCase() === raw.trim().toLowerCase().replace(/\s+/g, ' '));
-  if (!e) return false;
-  t.print(fill(e.output), eggKind(e.output)); return true;
-};
-// 彩蛋：点击 [data-egg=<element>] 元素 N 次（1.5s 内连续）。logo=标题；close-prank=弹窗关闭按钮；未出现在界面上的元素名（如 night-vision）留待对应模块
-document.querySelector('h1')!.dataset.egg = 'logo';
-const clickCounts = new Map<string, { n: number; timer: number }>();
-document.addEventListener('click', (ev) => {
-  const elName = (ev.target as HTMLElement | null)?.closest<HTMLElement>('[data-egg]')?.dataset.egg; if (!elName) return;
-  const st = clickCounts.get(elName) ?? { n: 0, timer: 0 }; clearTimeout(st.timer);
-  st.n++; st.timer = window.setTimeout(() => clickCounts.delete(elName), 1500); clickCounts.set(elName, st);
-  for (const e of allEggs.filter((x) => x.kind === 'click' && x.element === elName && st.n === (x.count ?? 1))) {
-    const on = e.effect === 'pink' ? document.body.classList.toggle('kitty') : true;
-    term.print(on ? (e.output.startsWith('[') ? e.output : `[♥] ${e.output}`) : '[i] 已退出 Hello Kitty 安全模式', 'warn');
+function finishTool() {
+  if (!selected) return; const session = selected; const latest = session.runtime.state.tasks[session.runtime.state.tasks.length - 1]; if (latest) session.revealed.add(latest.id); session.runtime.end(); cleanupDetail?.(); cleanupDetail = undefined; detailKey = '';
+  const task = session.runtime.state.tasks[session.runtime.state.tasks.length - 1]; if (task) session.revealed.add(task.id);
+  showReveal(session.module.name, '刚才的探测、会话、数据与操作结果均为本地演出，没有执行真实入侵、设备接管、文件加密或资金交易。网站公开资料仅用于构造背景。'); sync();
+}
+function saveDraft() { if (!selected || !app.querySelector('#module-form')) return; const data = new FormData($('#module-form') as HTMLFormElement); selected.input = String(data.get('target') ?? ''); selected.draft = Object.fromEntries([...data.entries()].filter(([key]) => key !== 'target')) as Params; }
+function setPage(name: string) {
+  pageName = name; for (const p of ['home','terminal','about','replay']) $(`#${p}-page`).classList.toggle('hidden', p !== name);
+  $('#home-button').classList.toggle('active', name === 'home'); $('#terminal-button').classList.toggle('active', name === 'terminal');
+  if (name !== 'terminal') { cleanupDetail?.(); cleanupDetail = undefined; detailKey = ''; }
+}
+function sessionFor(module: ModuleDefinition): ToolSession {
+  const found = sessions.get(module.id); if (found) return found;
+  const runtime = new Runtime([module]); const host = el('div', 'shell-panel');
+  const session: ToolSession = { module, runtime, host, draft: {}, input: '', revealed: new Set(), shell: undefined as unknown as Shell };
+  session.shell = new Shell(host, runtime, module, (target, params) => startRun(session, target, params), () => { if (selected === session) finishTool(); });
+  sessions.set(module.id, session); runtime.subscribe(() => {
+    const retained = new Set(runtime.state.tasks.map(task => task.id));
+    for (const id of session.revealed) if (!retained.has(id)) session.revealed.delete(id);
+    sync();
+  }); return session;
+}
+function fieldGroup(name: string, labelText: string, input: HTMLElement, help = '') {
+  const group = el('div', 'field'); const label = el('label', '', labelText); const id = `field-${name}`; label.htmlFor = id; input.id = id; group.append(label, input);
+  if (help) { const hint = el('small', '', help); hint.id = `${id}-help`; input.setAttribute('aria-describedby', hint.id); group.append(hint); } return group;
+}
+function renderForm() {
+  const host = $('#module-fields'); host.replaceChildren(); $('#form-errors').replaceChildren(); if (!selected) return;
+  const { module, draft } = selected;
+  if (module.targetRequired !== false) { const input = el('input'); input.name = 'target'; input.setAttribute('aria-label', '目标'); input.placeholder = module.view === 'wallet' ? 'NVA-7F42A91C' : module.view === 'cms' ? '输入网站网址' : '输入目标名称、地址或代号'; input.value = selected.input; input.maxLength = 253; input.autocomplete = 'off'; input.required = true; host.append(fieldGroup('target', module.view === 'cms' ? '目标网址' : '目标', input)); }
+  const advanced = el('details', 'advanced-fields'); advanced.append(el('summary', '', '高级配置'));
+  for (const f of module.fields) {
+    const input = f.type === 'select' ? el('select') : el('input'); input.name = f.key; input.required = !!f.required;
+    if (input instanceof HTMLSelectElement) (f.options ?? []).forEach(o => input.add(new Option(o.label, o.value)));
+    else { input.type = f.type === 'number' ? 'number' : 'text'; input.placeholder = f.placeholder ?? ''; input.autocomplete = 'off'; input.maxLength = 256; }
+    input.value = draft[f.key] ?? f.default ?? ''; const group = fieldGroup(f.key, f.label, input, f.help ?? ''); (f.advanced ? advanced : host).append(group);
   }
-}, true);
-
-const quick = document.createElement('div'); quick.className = 'quick';
-for (const name of ['help', ...SCRIPTS.map((s) => s.id), 'trace', 'clear']) {
-  const b = document.createElement('button'); b.textContent = name; b.onclick = (e) => { e.stopPropagation(); void term.exec(name); };
-  quick.append(b);
+  if (advanced.childElementCount > 1) host.append(advanced);
+  $('#module-form').oninput = saveDraft;
 }
-panel.append(quick);
-
-// 设置：主题按钮 + 音效开关
-const slot = document.querySelector<HTMLElement>('#settings-slot')!;
-const themeBtns = (Object.keys(THEMES) as Theme[]).map((k) => {
-  const b = document.createElement('button'); b.type = 'button'; b.className = 'mini theme-btn'; b.dataset.themeChoice = k;
-  b.textContent = { matrix: '绿', cyber: '紫', alert: '红' }[k]; b.title = `主题：${THEMES[k]}`; b.setAttribute('aria-label', `主题：${THEMES[k]}`);
-  b.onclick = (e) => { e.stopPropagation(); setTheme(k); }; slot.append(b); return b;
-});
-const soundBtn = document.createElement('button'); soundBtn.type = 'button'; soundBtn.className = 'mini'; soundBtn.id = 'sound-btn';
-soundBtn.onclick = (e) => { e.stopPropagation(); setMuted(!isMuted()); };
-slot.append(soundBtn);
-const syncSettings = () => {
-  themeBtns.forEach((b) => b.classList.toggle('on', b.dataset.themeChoice === currentTheme()));
-  soundBtn.textContent = isMuted() ? '🔇 静音' : '🔊 音效'; soundBtn.setAttribute('aria-pressed', String(!isMuted()));
-};
-addEventListener('htb:theme', syncSettings); addEventListener('htb:sound', syncSettings); syncSettings();
-
-// 全屏按钮 / 免责声明入口
-const fsBtn = document.querySelector<HTMLButtonElement>('#fs-btn')!;
-fsBtn.onclick = (e) => { e.stopPropagation(); void toggleFullscreen(); };
-onFullscreenChange((on, mode) => {
-  fsBtn.textContent = on ? '✕ 退出全屏' : '⛶ 全屏';
-  term.print(on ? `[*] 已进入${mode === 'native' ? '' : '沉浸'}全屏，按 Esc 退出。` : '[i] 任务取消，特工下班。', 'dim');
-});
-document.querySelector('#open-disclaimer')!.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); void showDisclaimer(true, 0); });
-document.body.dataset.scripts = SCRIPTS.map((s) => s.id).join(',');
-
-// G2 首页模块宫格
-const PRANK = new Set(['camera-takeover', 'ransom-prank']); // 整蛊类（PRD §2.8）
-const cards = document.querySelector<HTMLElement>('#cards')!;
-for (const sc of SCRIPTS) {
-  const c = document.createElement('button'); c.type = 'button'; c.className = 'card'; c.dataset.script = sc.id;
-  const h = document.createElement('div'); h.className = 'card-title'; h.textContent = sc.description;
-  const t = document.createElement('div'); t.className = 'card-tool'; t.textContent = sc.name;
-  const u = document.createElement('div'); u.className = 'card-cmd'; u.textContent = `$ ${sc.usage ?? sc.id}`;
-  c.append(h, t, u);
-  if (PRANK.has(sc.id)) { const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = '整蛊类'; c.append(tag); }
-  c.onclick = () => { location.hash = `#/tool/${encodeURIComponent(sc.id)}`; };
-  cards.append(c);
+function openTool(id: string) {
+  const module = MODULES.find(m => m.id === id); if (!module) return;
+  saveDraft(); cleanupDetail?.(); cleanupDetail = undefined; detailKey = ''; selected = sessionFor(module);
+  $('#tool-title').textContent = module.name; $('#tool-description').textContent = module.description; $('#shell-slot').replaceChildren(selected.host); renderForm(); setPage('terminal'); location.hash = `#/tool/${id}`; sync();
 }
-// M11 一键神功（构建期开关 VITE_GAGS=1，见 ui/gags.ts）
-void loadGags().then((d) => {
-  renderGags();
-  if (d) term.register({ name: 'gag', hidden: true, usage: 'gag <id>', description: '运行一键神功', run: ({ args, term: t }) => {
-    if (!gagIds().includes(args[0])) return t.print(`未知神功：${args[0] ?? ''}`, 'err');
-    return runGag(args[0]);
-  } });
-});
-
-// 关于页：一键清除本地设置（R10）
-document.querySelector<HTMLButtonElement>('#reset-settings')!.onclick = () => {
-  Object.keys(localStorage).filter((k) => k.startsWith('htb.')).forEach((k) => localStorage.removeItem(k));
-  document.querySelector('#reset-msg')!.textContent = '已清除（刷新后生效）';
-};
-
-let started = false;
-async function route() {
-  const r = parseRoute();
-  showView(r.view);
-  if (r.view === 'reveal') renderReveal(decodeReveal(r.payload), {
-    onAgain: (id, tg) => { location.hash = `#/tool/${encodeURIComponent(id)}${tg ? '?target=' + encodeURIComponent(tg) : ''}`; },
-    onHome: () => { location.hash = '#/'; },
-  });
-  if (r.view === 'tool') {
-    term.input.focus();
-    if (r.id && started && !term.isBusy) { replaceHash('#/tool'); await term.exec([r.id, r.target].filter(Boolean).join(' ')); }
+function startRun(session: ToolSession, target: string, params: Params) {
+  try {
+    $('#form-errors').replaceChildren(); const task = session.runtime.startRun(session.module.id, target, params);
+    session.input = target; session.draft = { ...task.params }; if (selected === session) renderForm(); sfx('click');
+  } catch (error) {
+    const errors = error instanceof ValidationError ? error.errors : { task: error instanceof Error ? error.message : String(error) };
+    if (selected === session) { $('#form-errors').replaceChildren(...Object.entries(errors).map(([key, text]) => { const p = el('p', 'error', text); p.dataset.field = key; return p; })); }
+    session.shell.print(Object.values(errors).join(' / '), 'error');
   }
 }
-addEventListener('hashchange', () => void route());
-
-void (async () => {
-  showView(parseRoute().view === 'reveal' ? 'reveal' : parseRoute().view);
-  await showDisclaimer();
-  await term.type('欢迎使用 黑客工具箱·搞怪版 v0.1', 'ok', 30);
-  await term.type('本工具所有效果均为本地模拟，请放心“入侵”。输入 help 开始。', 'warn', 15);
-  term.input.focus();
-  // 测试/演示钩子：#run=<命令> 或 #autorun=<命令>（自动关闭揭晓弹窗）；URL 编码，多条用 ;; 分隔
-  const m = /^#(auto)?run=(.+)$/.exec(location.hash);
-  if (m?.[1]) document.body.dataset.autoDismiss = '1';
-  if (m) for (const c of decodeURIComponent(m[2]).split(';;')) await term.exec(c);
-  else if (location.hash === '#demo') await term.exec('port-scan');
-  started = true;
-  if (!m) await route();
-  document.body.dataset.autorunDone = '1';
-})();
+function renderDetails() {
+  if (!selected || pageName !== 'terminal') return;
+  const target = selected.runtime.activeTarget; const key = selected.module.id + ':' + (target?.id ?? '') + ':' + selected.runtime.state.ended; if (key === detailKey) return;
+  cleanupDetail?.(); cleanupDetail = undefined; detailKey = key; const host = $('#module-detail'); host.replaceChildren();
+  if (selected.runtime.state.ended) { host.append(el('p', 'detail-empty', '会话已结束，可导出报告或开始新一轮。')); return; }
+  if (!target) { host.append(el('p', 'detail-empty', '配置目标与参数后启动。运行期间可在其他工具间切换。')); return; }
+  const factory = selected.module.view ? EXTRA_VIEWS[selected.module.view] : undefined;
+  if (factory) cleanupDetail = factory(host, target.id, selected.runtime);
+  else if (selected.module.view) cleanupDetail = mountDetail(host, selected.module.view, target.id, selected.runtime);
+  else host.append(el('pre', '', target.files['/reports/result.txt'] ?? '等待运行结果'));
+}
+function currentReport(): Report | undefined {
+  if (!selected) return; const task = selected.runtime.state.tasks[selected.runtime.state.tasks.length - 1]; const target = selected.runtime.state.targets.find(t => t.id === task?.targetId); if (!task || !target) return; return createReport(selected.module, target, task);
+}
+function sync() {
+  let running = 0; sessions.forEach(s => running += s.runtime.state.tasks.filter(t => t.status === 'running').length); $('#running-note').textContent = running ? `${running} 个工具运行中` : '';
+  app.querySelectorAll<HTMLElement>('[data-module]').forEach(n => { const state = sessions.get(n.dataset.module!); n.classList.toggle('active', selected?.module.id === n.dataset.module && pageName === 'terminal'); n.classList.toggle('is-running', !!state?.runtime.state.tasks.some(t => t.status === 'running')); });
+  if (!selected) return;
+  const { runtime, module } = selected; const task = runtime.state.tasks[runtime.state.tasks.length - 1];
+  const choiceHost = $('#choice-panel'); const choiceKey = task?.choice ? `${task.id}:${task.choice.prompt}` : '';
+  if (choiceHost.dataset.key !== choiceKey) { choiceHost.dataset.key = choiceKey; choiceHost.replaceChildren(); if (task?.choice) { choiceHost.append(el('h3', '', task.choice.prompt)); const row = el('div', 'choice-buttons'); task.choice.options.forEach(o => row.append(button(o.label, () => { try { runtime.choose(task.id, o.value); } catch (error) { selected?.shell.print(String(error), 'error'); } }))); choiceHost.append(row); } }
+  $('#task-status').textContent = task ? `${statuses[task.status]} · ${task.phase}` : '等待配置';
+  ($('#task-progress') as HTMLProgressElement).value = task?.progress ?? 0;
+  $('#task-result').textContent = task?.result ?? task?.error ?? '';
+  const active = task?.status === 'running'; ($('#start-task') as HTMLButtonElement).disabled = !!active; ($('#new-run') as HTMLButtonElement).disabled = !!active;
+  $('#stop-task').classList.toggle('hidden', !active); $('#stop-task').textContent = module.continuous ? '停止任务' : '中断任务';
+  ($('#end-tool') as HTMLButtonElement).disabled = !task; ($('#share-image') as HTMLButtonElement).disabled = !task; ($('#share-link') as HTMLButtonElement).disabled = !task;
+  const history = $('#task-list'); const historyKey = runtime.state.tasks.slice(-5).map(t => `${t.id}${t.status}${t.progress.toFixed(0)}`).join();
+  if (history.dataset.key !== historyKey) { history.dataset.key = historyKey; history.replaceChildren(); runtime.state.tasks.slice(-5).reverse().forEach(t => { const row = el('div', `task-row ${t.status}`); row.dataset.taskId = t.id; row.append(el('strong', '', t.targetInput || module.name), el('span', '', statuses[t.status]), el('small', '', t.result ?? t.error ?? t.phase), button('查看报告', () => showHistory(t, runtime))); history.append(row); }); }
+  $('#history-count').textContent = String(runtime.state.tasks.length); renderDetails();
+  if (module.autoReveal && task && task.status !== 'running' && !selected.revealed.has(task.id) && pageName === 'terminal') { selected.revealed.add(task.id); showReveal(module.name, '警报已解除。刚才的文件、加密状态和倒计时均为页面演出，没有读取、加密或修改你的真实文件。'); }
+}
+function showHistory(task: Task, runtime: Runtime) {
+  const dialog = el('dialog', 'report-dialog'); const title = el('h2', '', task.title); const body = el('pre', '', `${task.targetInput ?? ''}\n${task.result ?? task.error ?? task.phase}\n\n${task.logs.join('\n')}`); dialog.append(title, body, button('关闭', () => { dialog.close(); dialog.remove(); }), el('p', 'modal-disclosure', '纯属娱乐，所有内容均为模拟')); dialog.addEventListener('close', () => dialog.remove(), { once: true }); document.body.append(dialog); dialog.showModal();
+}
+async function openReplay(payload: string) {
+  replayCleanup?.(); replayCleanup = undefined; setPage('replay'); const host = $('#replay-content'); host.replaceChildren(el('p', '', '载入报告…'));
+  try {
+    const report = await readReport(payload); const module = MODULES.find(m => m.id === report.moduleId); if (!module) throw new Error('此工具报告版本不受支持');
+    host.replaceChildren(el('h2', '', report.title), el('p', '', report.target.domain), el('p', 'muted', report.kind === 'flow' ? '过程回放' : '成果报告'));
+    const output = el('pre', 'replay-log'); const detail = el('div', 'replay-detail'); const controls = el('div', 'detail-actions'); host.append(output, controls, detail);
+    const sequence = report.kind === 'flow' ? report.task.events?.filter(e => ['choice','phase','result','error'].includes(e.kind)).slice(-24).map(e => `${e.kind.toUpperCase()} ${e.value}`) ?? report.task.logs.slice(-12) : [report.task.phase, report.task.result ?? '当前状态报告']; let index = 0; let timer: ReturnType<typeof setInterval> | undefined; let revealTimer: ReturnType<typeof setTimeout> | undefined;
+    const reveal = () => { if (timer) clearInterval(timer); replayCleanup?.(); replayCleanup = undefined; showReveal(report.title, '本报告中的探测、状态、数据与修改均为娱乐演出，不代表真实网站、设备或资产发生变化。'); };
+    const showResult = () => {
+      if (detail.childElementCount) return;
+      detail.append(el('h3', '', '结果摘要'), el('p', '', report.task.result ?? report.task.error ?? report.task.phase));
+      if (report.target.unlocked) { detail.append(el('h3', '', report.target.name), el('p', '', report.target.announcement)); report.target.records.forEach(row => detail.append(el('p', '', `${row.title} · ${row.detail} · ${row.status}`))); }
+      else if (report.moduleId === 'phone-control') detail.append(el('pre', '', JSON.stringify(report.target.data, null, 2).slice(0, 3000)));
+      else detail.append(el('pre', '', report.task.logs.slice(-8).join('\n')));
+    };
+    const next = () => { if (index < sequence.length) output.textContent += sequence[index++] + '\n'; if (index >= sequence.length) { if (timer) clearInterval(timer); showResult(); if (!revealTimer) revealTimer = setTimeout(reveal, 1800); } };
+    controls.append(button('播放回放', () => { if (timer) clearInterval(timer); if (revealTimer) { clearTimeout(revealTimer); revealTimer = undefined; } if (index >= sequence.length) { index = 0; output.textContent = ''; detail.replaceChildren(); } timer = setInterval(next, 250); }), button('下一步', next), button('结束回放', reveal), button('我也体验', () => { if (timer) clearInterval(timer); openTool(module.id); }));
+    replayCleanup = () => { if (timer) clearInterval(timer); if (revealTimer) clearTimeout(revealTimer); }; next();
+  } catch (error) { host.replaceChildren(el('p', 'error', error instanceof Error ? error.message : String(error)), button('返回首页', () => { location.hash = '#/'; route(); })); }
+}
+function route() {
+  if (location.hash.startsWith('#/replay/')) { void openReplay(location.hash.slice(9)); return; }
+  replayCleanup?.(); replayCleanup = undefined;
+  const match = /^#\/tool\/([a-z-]+)$/.exec(location.hash);
+  if (match) { if (selected?.module.id !== match[1] || pageName !== 'terminal') openTool(match[1]); return; }
+  if (location.hash === '#/about') { saveDraft(); setPage('about'); }
+  else if (location.hash === '#/tool') { setPage('terminal'); if (selected) sync(); }
+  else { saveDraft(); setPage('home'); }
+}
+function bootstrap() {
+  app.innerHTML = `<header class="classic-header"><h1 class="glitch" data-text="黑客工具箱">黑客工具箱</h1><nav class="sub" aria-label="主导航"><button id="home-button">首页</button><button id="terminal-button">终端</button><button id="about-button">关于</button><button id="open-disclaimer">声明</button><button id="fs-btn">⛶ 全屏</button><button data-theme="matrix">绿</button><button data-theme="cyber">紫</button><button data-theme="alert">红</button><button id="sound-btn">音效</button></nav></header>
+  <main><section id="home-page"><div class="hero"><h2>安全研究与系统分析工具集</h2><p>目标识别 · 服务探测 · 会话分析 · 态势监测</p><p class="muted">选择工具，配置目标与参数，检查执行结果。</p></div><div id="cards"></div><section class="quick-section"><h2>快速操作</h2><div id="quick-actions"></div></section></section>
+  <section id="terminal-page" class="hidden"><div class="tool-heading"><h2 id="tool-title">交互式终端</h2><span id="running-note"></span><button id="new-run">新一轮</button><button id="end-tool">结束演示</button></div><p id="tool-description">选择工具以建立会话。</p><div class="classic-grid"><section class="terminal-column"><div id="shell-slot"><div class="panel detail-empty">选择下方工具开始。</div></div><div id="module-nav" class="quick"></div><details class="task-section"><summary>最近记录 <span id="history-count">0</span></summary><div id="task-list"></div></details></section><section class="operation-column"><section class="panel configuration"><div class="panel-heading">任务配置</div><form id="module-form" novalidate><div id="module-fields"></div><div id="form-errors" role="alert"></div><div class="detail-actions"><button id="start-task" type="submit">启动任务</button><button id="stop-task" type="button" class="hidden">中断任务</button></div></form><p id="task-status">等待配置</p><progress id="task-progress" max="100" value="0" aria-label="任务进度"></progress><p id="task-result" role="status"></p><div id="choice-panel"></div></section><section id="module-detail" class="panel detail"><div class="idle-map"></div></section><section class="panel share-actions"><button id="share-image">导出战报图片</button><button id="share-link">生成回放链接</button><div id="share-output" role="status"></div></section></section></div></section>
+  <section id="about-page" class="hidden panel guide"><h2>操作说明</h2><p>选择工具后输入目标与参数，按执行反馈作出选择。运行期间可切换工具，返回后恢复当前会话。新一轮需要重新输入目标，各工具的记录与状态独立。</p><p>终端输入 help 查看命令，select 选择当前分支，Ctrl+C 中断。持续任务可暂停、恢复或停止；结果可以导出图片或生成回放链接。</p><h2>产品声明</h2><p>纯属娱乐，所有内容均为模拟。工具不会执行真实入侵、设备接管、文件加密或资金交易。网站工具可尝试读取公开资料用作背景，无法取得的内容由页面生成。</p><p>目标与报告仅保留在当前页面会话；刷新清空。主题与音效偏好只保存在本机。</p><button id="reset-settings">清除本地设置</button><p id="reset-msg"></p><p class="muted">创意参考 GodOfHacker，界面与流程独立实现。</p></section>
+  <section id="replay-page" class="hidden panel"><div id="replay-content"></div></section></main>`;
+  MODULES.forEach(module => { const card = button('', () => openTool(module.id), 'card'); card.dataset.module = module.id; card.append(el('strong','card-title',module.name),el('span','card-tool',module.description),el('span','card-cmd',`$ ${module.code}`)); $('#cards').append(card); const quick = button(module.name, () => openTool(module.id)); quick.dataset.module = module.id; $('#module-nav').append(quick); });
+  mountQuickActions($('#quick-actions'), showReveal);
+  ($('#module-form') as HTMLFormElement).onsubmit = e => { e.preventDefault(); if (!selected) return; saveDraft(); startRun(selected, selected.input, selected.draft); };
+  $('#home-button').onclick = () => { saveDraft(); location.hash = '#/'; setPage('home'); };
+  $('#terminal-button').onclick = () => { if (!selected) openTool(MODULES[0].id); else { location.hash = `#/tool/${selected.module.id}`; setPage('terminal'); sync(); } };
+  $('#about-button').onclick = () => { saveDraft(); location.hash = '#/about'; setPage('about'); };
+  $('#new-run').onclick = () => { if (!selected || selected.runtime.state.tasks.some(t => t.status === 'running')) return; selected.input = ''; selected.draft = {}; renderForm(); ($('#module-form input[name="target"]') as HTMLInputElement | null)?.focus(); };
+  $('#end-tool').onclick = finishTool;
+  $('#stop-task').onclick = () => { if (!selected) return; const task = selected.runtime.state.tasks.find(t => t.status === 'running'); if (task) selected.module.continuous ? selected.runtime.stop(task.id) : selected.runtime.cancel(task.id); };
+  $('#share-image').onclick = () => { const report = currentReport(); if (report) void exportReportImage(report).catch(error => { $('#share-output').textContent = String(error); }); };
+  $('#share-link').onclick = async () => { const report = currentReport(); if (!report) return; try { const url = await reportLink(report); const input = el('input'); input.readOnly = true; input.value = url; input.setAttribute('aria-label', '回放链接'); $('#share-output').replaceChildren(input, button('复制链接', () => { void navigator.clipboard.writeText(url).catch(() => { input.select(); }); })); } catch (error) { $('#share-output').textContent = error instanceof Error ? error.message : String(error); } };
+  $('#open-disclaimer').onclick = () => void showDisclaimer(true); $('#fs-btn').onclick = () => void toggleFullscreen();
+  const sound = () => { $('#sound-btn').textContent = isMuted() ? '🔇 音效' : '🔊 音效'; $('#sound-btn').setAttribute('aria-pressed', String(!isMuted())); }; sound(); $('#sound-btn').onclick = () => { setMuted(!isMuted()); sound(); };
+  app.querySelectorAll<HTMLButtonElement>('[data-theme]').forEach(b => b.onclick = () => setTheme(b.dataset.theme as Theme));
+  $('#reset-settings').onclick = () => { try { Object.keys(localStorage).filter(k => k.startsWith('htb.')).forEach(k => localStorage.removeItem(k)); $('#reset-msg').textContent = '设置已清除'; } catch { $('#reset-msg').textContent = '当前存储不可用'; } };
+  window.addEventListener('tool:finish', event => { if ((event as CustomEvent<{targetId:string}>).detail?.targetId === selected?.runtime.activeTarget?.id) finishTool(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') sessions.forEach(s => { if (s.module.autoReveal) { const task = s.runtime.state.tasks.find(t => t.status === 'running'); if (task) { event.preventDefault(); s.runtime.cancel(task.id); } } }); });
+  const revealDialog = document.getElementById('reveal-dialog') as HTMLDialogElement; revealDialog.querySelector('button')!.onclick = () => { revealDialog.close(); if (selected) { selected.input = ''; renderForm(); } };
+  addEventListener('hashchange', route); route(); sync();
+}
+if (!frameBust()) {
+  initTheme(); initSound(); startCodeRain(document.getElementById('rain') as HTMLCanvasElement); bootstrap();
+  const disclosure = document.getElementById('sim-pill')!; disclosure.onclick = () => void showDisclaimer(true); disclosure.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void showDisclaimer(true); } }; void showDisclaimer();
+}

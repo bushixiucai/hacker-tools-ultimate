@@ -45,7 +45,7 @@ export class Terminal {
     this.hist.push(s); this.hi = this.hist.length;
     // 渲染写实的 Kali 命令前缀
     const cmdLine = el('div', 'term-cmd-history');
-    cmdLine.innerHTML = `<span class="dim">┌──(${this.userHost})-[${this.cwd}]</span><br/><span class="ok">└─$ </span><span class="cmd-text">${s}</span>`;
+    cmdLine.append(el('span', 'dim', `┌──(${this.userHost})-[${this.cwd}]`), document.createElement('br'), el('span', 'ok', '└─$ '), el('span', 'cmd-text', s));
     this.out.append(cmdLine);
     this.scroll();
 

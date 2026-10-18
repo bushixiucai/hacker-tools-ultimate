@@ -1,72 +1,38 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { GAG_CATEGORIES } from '../src/gags.categories';
+import { test, expect } from '@playwright/test';
 
-const GAG_DATA = JSON.parse(readFileSync(new URL('../../scripts/gags/gags.json', import.meta.url), 'utf8')) as { id: string; category: keyof typeof GAG_CATEGORIES }[];
-const ORIGIN = `http://127.0.0.1:${process.env.E2E_GAGS_PORT ?? Number(process.env.E2E_PORT ?? 4321) + 1}`;
-const DISCLAIMER_KEY = 'htb.disclaimer.v1';
+test.beforeEach(async ({page})=>{await page.addInitScript(()=>localStorage.setItem('htb.disclaimer.v1','1'));});
 
-/** 记录所有请求与控制台错误；拦截任何非同源请求（同时记为违规） */
-async function guard(page: Page) {
-  const requests: string[] = [], violations: string[] = [], errors: string[] = [];
-  await page.context().route('**/*', (route) => {
-    const url = route.request().url();
-    if (url.startsWith(ORIGIN + '/') || url.startsWith('data:') || url.startsWith('blob:')) return route.continue();
-    violations.push(url); return route.abort();
-  });
-  page.on('request', (r) => requests.push(r.url()));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  page.on('pageerror', (e) => errors.push(String(e)));
-  return { requests, violations, errors };
-}
-async function acceptDisclaimerUpfront(page: Page) {
-  await page.addInitScript((k) => localStorage.setItem(k, '1'), DISCLAIMER_KEY);
-}
-/** 免责胶囊可见且未被遮挡：位于视口右下角、不透明度 ≥ 0.6、其中心点命中胶囊自身 */
-async function expectSimPillVisible(page: Page) {
-  const pill = page.locator('#sim-pill');
-  await expect(pill).toBeVisible();
-  await expect(pill).toContainText('本地模拟');
-  const ok = await page.evaluate(() => {
-    const b = document.getElementById('sim-pill')!, r = b.getBoundingClientRect();
-    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    return { onTop: !!top && b.contains(top), opacity: Number(getComputedStyle(b).opacity), inView: r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth };
-  });
-  expect(ok.onTop, '免责胶囊被遮挡').toBe(true);
-  expect(ok.opacity).toBeGreaterThanOrEqual(0.6);
-  expect(ok.inView).toBe(true);
-}
-function expectClean(g: Awaited<ReturnType<typeof guard>>) {
-  expect(g.violations, '出现非同源请求').toEqual([]);
-  expect(g.requests.filter((u) => !u.startsWith(ORIGIN + '/') && !u.startsWith('data:') && !u.startsWith('blob:'))).toEqual([]);
-  expect(g.errors, '控制台错误').toEqual([]);
-}
-
-
-test('一键神功（VITE_GAGS=1 构建）：按分类渲染（PM 显示名），点一个跑到反转弹窗', async ({ page }) => {
-  const g = await guard(page); await acceptDisclaimerUpfront(page);
-  await page.goto('/');
-  await expect(page.locator('#gags')).toBeVisible();
-  await expect(page.locator('.gag-btn')).toHaveCount(GAG_DATA.length);
-  for (const cat of Object.keys(GAG_CATEGORIES) as (keyof typeof GAG_CATEGORIES)[]) {
-    const n = GAG_DATA.filter((x) => x.category === cat).length;
-    const grp = page.locator(`.gag-group[data-category="${cat}"]`);
-    if (!n) { await expect(grp).toHaveCount(0); continue; }
-    await expect(grp.locator('h3')).toHaveText(GAG_CATEGORIES[cat]);
-    await expect(grp.locator('.gag-btn')).toHaveCount(n);
+test('All twenty quick actions validate their own inputs and produce a distinct conclusion',async({page})=>{
+  const errors:string[]=[];const external:string[]=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.route('**/*',route=>{const url=new URL(route.request().url());if(url.hostname==='127.0.0.1'||['data:','blob:'].includes(url.protocol))return route.continue();external.push(url.href);return route.abort();});
+  await page.goto('/');await expect(page.locator('#quick-actions [data-quick]')).toHaveCount(20);
+  const titles=new Set<string>();const reports=new Set<string>();
+  const evidence=['[ASSETS]','Cache-Control:','/admin →','[ENTROPY]','[FORMAT]','[AUTH]','[EXPOSURE]','[ROLE]','[BASELINE]','[CHANNEL 1]','[EAPOL]','[AP 1]','[INTERFACE]','[ARCH]','[OFFSET AFTER]','[HOST]','[SUBJECT]','[HOP 1]','[JITTER]','[SUCCESS]'];
+  for(let index=0;index<20;index++){
+    const trigger=page.locator(`#quick-actions [data-quick="${index}"]`);const title=(await trigger.innerText()).trim();titles.add(title);expect(title).not.toMatch(/玄学|搞怪|意念/);await trigger.click();
+    const dialog=page.locator('dialog.quick-dialog');await expect(dialog).toBeVisible();await expect(dialog.locator('h2')).toHaveText(title);
+    const field=dialog.getByRole('textbox',{name:'目标或样本'});
+    if(await field.count()){
+      await dialog.getByRole('button',{name:'开始检查',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('请输入');
+      await field.fill('sample.example');
+    }
+    await dialog.getByRole('button',{name:'开始检查',exact:true}).click();
+    await dialog.getByRole('button',{name:index%2?'深入核对':'标准核对',exact:true}).click();
+    await expect(dialog.locator('.quick-output')).toContainText('[STATUS]');await expect(dialog.locator('.quick-output')).toContainText('[CONCLUSION]');
+    const report=(await dialog.locator('.quick-output').innerText()).split('\n').filter(line=>!/^\[(INIT|TARGET|READY|PROFILE)\]/.test(line)).join('\n').trim();reports.add(report);
+    expect(report).toContain(evidence[index]);await expect(page.locator('#reveal-dialog')).toBeHidden();
+    await dialog.getByRole('button',{name:'查看检查结论',exact:true}).click();await expect(page.locator('#reveal-dialog')).toBeVisible();await expect(page.locator('#reveal-dialog')).toContainText(title);
+    await page.locator('#reveal-dialog button').click();
   }
-  await expectSimPillVisible(page);
-  const btn = page.locator('.gag-btn').first();
-  const label = (await btn.textContent())!;
-  await btn.click();
-  await expect(page.locator('.gag-run')).toBeVisible();
-  await expect(page.locator('.gag-run .bar span')).toContainText(/\d+%/, { timeout: 8_000 });
-  const pop = page.locator('.popup:not(.disclaimer)');
-  await expect(pop).toBeVisible({ timeout: 10_000 });
-  await expect(pop.locator('.big')).toHaveText(label);
-  await expect(pop.locator('.psub')).not.toHaveText('正在注入载荷……', { timeout: 5_000 });
-  await expectSimPillVisible(page);
-  await pop.locator('.close-btn').click();
-  await expect(page.locator('.gag-run')).toHaveCount(0);
-  expectClean(g);
+  expect(titles.size).toBe(20);expect(reports.size).toBe(20);expect(errors).toEqual([]);expect(external).toEqual([]);
+});
+
+test('Quick action cancel and mobile dialog are operable without overflow',async({page})=>{
+  await page.setViewportSize({width:320,height:740});await page.goto('/');
+  await page.locator('#quick-actions [data-quick="0"]').click();await page.locator('dialog.quick-dialog input').fill('sample.example');await page.locator('dialog.quick-dialog button[type=submit]').click();
+  await page.keyboard.press('Escape');await expect(page.locator('dialog.quick-dialog')).toHaveCount(0);
+  await page.waitForTimeout(800);await expect(page.locator('#reveal-dialog')).toBeHidden();
+  await page.locator('#quick-actions [data-quick="14"]').click();await expect(page.locator('dialog.quick-dialog input')).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.locator('dialog.quick-dialog').getByRole('button',{name:'关闭',exact:true}).click();
 });

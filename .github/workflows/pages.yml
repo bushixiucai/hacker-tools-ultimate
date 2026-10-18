@@ -24,11 +24,11 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      # build（含 check:no-network / names / scripts）+ check:dist-no-gags + e2e，任何一项失败都不发布
+      - run: npx playwright install --with-deps chromium webkit
+      # Build, core lifecycle tests, desktop/mobile flows and quick actions gate deployment.
       - run: npm run test:e2e
-      # 最终产物：不带 VITE_GAGS 的正式构建
-      - run: npm run build && npm run check:dist-no-gags
+      - run: npx playwright test -c playwright.mobile.config.ts
+      # Tests exercise the exact artifact uploaded below.
       - uses: actions/upload-pages-artifact@v3
         with:
           path: app/dist
