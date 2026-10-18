@@ -9,21 +9,17 @@ export const DISCLAIMER_TEXT = [
 const accepted = () => { try { return localStorage.getItem(DISCLAIMER_KEY) === '1'; } catch { return false; } };
 
 /** 显示免责声明；force=true 时即使已接受也显示（再次打开）。返回 Promise，在用户确认后 resolve */
-export function showDisclaimer(force = false, skipDelayMs = 3000): Promise<void> {
+export function showDisclaimer(force = false, skipDelayMs = 0): Promise<void> {
   if (!force && accepted()) return Promise.resolve();
   document.querySelector('.disclaimer')?.remove();
   const ov = el('div', 'popup disclaimer'); ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
   const box = el('div', 'box dbox');
   box.append(el('div', 'dtitle', '⚠ 免责声明 · 纯属娱乐'));
   for (const t of DISCLAIMER_TEXT) box.append(el('p', '', t));
-  const btn = el('button', 'accept', `我已了解（${Math.ceil(skipDelayMs / 1000)}）`) as HTMLButtonElement;
-  btn.disabled = true; box.append(btn); ov.append(box); document.body.append(ov);
+  const btn = el('button', 'accept', '我已了解，开始玩') as HTMLButtonElement;
+  box.append(btn); ov.append(box); document.body.append(ov);
+  btn.focus();
   return new Promise((res) => {
-    void (async () => {
-      for (let s = Math.ceil(skipDelayMs / 1000); s > 0; s--) { btn.textContent = `我已了解（${s}）`; await sleep(1000); }
-      await sleep(300); // 避免触发打开的那次 Enter 键直接“点中”按钮
-      btn.disabled = false; btn.textContent = '我已了解，开始玩'; btn.focus();
-    })();
     btn.onclick = () => { try { localStorage.setItem(DISCLAIMER_KEY, '1'); } catch { /* 隐私模式忽略 */ } ov.remove(); res(); };
   });
 }

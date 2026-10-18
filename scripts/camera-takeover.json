@@ -1,80 +1,73 @@
 {
   "id": "camera-takeover",
-  "tool": "CamJack 3000（摄像头接管）",
+  "tool": "ONVIF-Probe（摄像头接管审计工具）",
   "disclaimer": "纯属娱乐：所有数据均为虚构，本地模拟，不发出任何网络请求。不调用真实摄像头，不请求任何权限；随时可按 ✕ 或 ESC 关闭。",
   "vars": {
-    "target": "用户选择的摄像头，默认 CAM-办公室鱼缸"
+    "target": "用户选择的设备节点，默认 CAM_NODE_01"
   },
   "lines": [
     {
       "t": 0,
-      "text": "[*] CamJack 3000 v3.3 —— 正在扫描附近的『虚构』摄像头……"
+      "text": "[*] ONVIF-Probe v4.2 - Broadcasting WS-Discovery probes on local subnet..."
     },
     {
-      "t": 800,
-      "text": "[+] 发现 4 台设备：CAM-办公室鱼缸 / CAM-楼道灭火器 / CAM-机房走廊 / CAM-茶水间"
+      "t": 600,
+      "text": "[+] Discovered 4 ONVIF devices on 192.0.2.0/24: CAM-01, CAM-02, CAM-03, CAM-04"
     },
     {
-      "t": 1600,
-      "text": "[*] 目标：{{target}}"
+      "t": 1200,
+      "text": "[*] Target device selected: {{target}} (RTSP port 554)"
     },
     {
-      "t": 2200,
-      "text": "[*] 握手中……发送了一句『你好呀』",
+      "t": 1800,
+      "text": "[*] Negotiating RTSP handshake: DESCRIBE rtsp://192.0.2.{{rand:10-250}}:554/live/ch0...",
       "progress": {
         "from": 0,
+        "to": 60,
+        "ms": 2200
+      }
+    },
+    {
+      "t": 4200,
+      "text": "[*] Probing RTSP authentication bypass vulnerability (CVE-2077-4401)..."
+    },
+    {
+      "t": 5000,
+      "text": "[+] Auth bypass successful! Stream profile extracted: H.264 Main@L4.1 / 1080p@25fps"
+    },
+    {
+      "t": 5800,
+      "text": "[*] Initializing PTZ motor controller and OSD overlay...",
+      "progress": {
+        "from": 60,
         "to": 100,
-        "ms": 3000
+        "ms": 2400
       }
     },
     {
-      "t": 5400,
-      "text": "[+] ACCESS CAM —— 画面已接入（本地预置素材）"
+      "t": 8400,
+      "text": "[+] Stream decoded. Binding video canvas to monitoring grid slot."
     },
     {
-      "t": 6200,
-      "text": "[*] 云台校准：左 15°…… 右 15°…… 摄像头头晕了"
-    },
-    {
-      "t": 7400,
-      "text": "[*] 夜视模式就绪（绿色滤镜，看谁都像外星人）"
-    },
-    {
-      "t": 10200,
-      "text": "[!] 画面中检测到可疑生物 ×1：橙色、毛茸茸、正在打哈欠"
-    },
-    {
-      "t": 12000,
-      "text": "[*] 正在锁定生物身份……",
-      "progress": {
-        "from": 0,
-        "to": 99,
-        "ms": 3000,
-        "stuck_at": 99,
-        "stuck_ms": 1500
-      }
-    },
-    {
-      "t": 17000,
-      "text": "[!!!] 识别完成：橘猫一只，危险等级 ★☆☆☆☆（会抢你的鱼）"
+      "t": 9200,
+      "text": "[!!!] LIVE SURVEILLANCE FEED ESTABLISHED. Active camera feed hijacked."
     }
   ],
   "twist": {
-    "popup_title": "📹 接管成功！",
-    "popup_body": "你成功接管了……一只橘猫的直播间。\n它已经盯着你看了 35 秒，并决定不理你。\n画面是假的，你的表情是真的。",
-    "button": "给猫咪点个赞"
+    "popup_title": "🐾 监控接管成功！",
+    "popup_body": "全部监控画面已实时捕获。\n不过经过计算机视觉算法分析：所有摄像头对准的高危目标……全是一只正盯着屏幕发呆的橘猫。\n它冲你眨了眨眼，表示毫无压力。\n（本程序绝不调用真实摄像头与硬件权限，所有画面皆为本地 Canvas 动态生成）",
+    "button": "给橘猫喂罐头"
   },
   "easter_eggs": [
     {
-      "trigger": "click",
-      "match": "night-vision",
-      "count": 3,
-      "output": "[👽] 夜视切了 3 次，橘猫说：别闪了，眼睛疼。"
+      "trigger": "command",
+      "match": "ptz-left",
+      "output": "[+] PTZ 云台向左偏转 15 度。"
     },
     {
       "trigger": "command",
-      "match": "zoom",
-      "output": "[+] 放大 400%：是猫鼻子。只有猫鼻子。"
+      "match": "night-vision",
+      "output": "[+] 红外微光夜视滤镜已开启。"
     }
   ]
 }

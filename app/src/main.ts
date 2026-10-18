@@ -9,12 +9,15 @@ import { showDisclaimer } from './ui/disclaimer';
 import { onFullscreenChange, toggleFullscreen } from './ui/fullscreen';
 import { parseRoute, replaceHash, showView } from './ui/router';
 import { CameraModule } from './modules/camera';
+import { VirtualBrowser } from './modules/virtualBrowser';
+import { RansomAlert } from './modules/ransomAlert';
 import { BUILTIN_EGGS } from './eggs.builtin';
 import { loadGags, renderGags, gagIds, runGag } from './ui/gags';
 import { decodeReveal, encodeReveal, renderReveal } from './ui/reveal';
 import { SCRIPTS, UNPARSED_EGGS, fakeIp, fill, runScenario, type ScenarioScript, type Vars } from './scenario';
 
 startCodeRain(document.querySelector<HTMLCanvasElement>('#rain')!);
+document.querySelector('#sim-pill')?.addEventListener('click', () => showDisclaimer(true, 0));
 const map = new WorldMap(document.querySelector<HTMLCanvasElement>('#map')!, document.querySelector<HTMLElement>('#hops')!);
 const barsEl = document.querySelector<HTMLElement>('#bars')!;
 const panel = document.querySelector<HTMLElement>('#term-panel')!;
@@ -47,6 +50,67 @@ term.register(
     setMuted(args[0] ? args[0] !== 'off' : !isMuted()); t.print(isMuted() ? '[i] 已静音。' : '[i] 音效已开启（40%）。', 'dim');
   } },
   { name: 'disclaimer', description: '查看免责声明', run: () => showDisclaimer(true, 0) },
+  { name: 'whoami', description: '显示当前有效用户', run: ({ term: t }) => t.print('kali', 'ok') },
+  { name: 'id', description: '显示用户与组 ID', run: ({ term: t }) => t.print('uid=1000(kali) gid=1000(kali) groups=1000(kali),24(cdrom),27(sudo),100(users),106(netdev)', 'dim') },
+  { name: 'uname', usage: 'uname [-a]', description: '显示系统信息', run: ({ term: t }) => t.print('Linux kali 6.6.0-kali1-amd64 #1 SMP PREEMPT_DYNAMIC Kali 6.6.9-1kali1 (2026-10-17) x86_64 GNU/Linux', 'dim') },
+  { name: 'uptime', description: '显示系统开机时间与负载', run: ({ term: t }) => t.print(' 21:45:00 up 42 days,  3:14,  1 user,  load average: 0.12, 0.08, 0.02', 'dim') },
+  { name: 'hostname', description: '显示系统主机名', run: ({ term: t }) => t.print('toolbox-offensive', 'dim') },
+  { name: 'ls', usage: 'ls [-la]', description: '列出文件目录', run: ({ term: t }) => {
+    t.print('total 28', 'dim');
+    t.print('drwxr-xr-x 2 kali kali 4096 Oct 18 21:00 exploits', 'ok');
+    t.print('drwxr-xr-x 2 kali kali 4096 Oct 18 21:00 wordlists', 'ok');
+    t.print('drwxr-xr-x 2 kali kali 4096 Oct 18 21:00 loot', 'ok');
+    t.print('-rw-r--r-- 1 kali kali  342 Oct 18 21:00 targets.cfg');
+    t.print('-rw-r--r-- 1 kali kali  188 Oct 18 21:00 note.txt');
+    t.print('-rwxr-xr-x 1 kali kali 8192 Oct 18 21:00 offensive_deploy.sh', 'ok');
+  } },
+  { name: 'cat', usage: 'cat [file]', description: '查看文件内容', run: ({ args, term: t }) => {
+    const f = args[0] ?? 'note.txt';
+    if (f === 'note.txt') {
+      t.print('[TOP SECRET MEMO]', 'warn');
+      t.print('1. 目标渗透与网页篡改完全为前端虚拟沙盒。');
+      t.print('2. 过程保持 100% 严肃写实，不可提前剧透。');
+      t.print('3. 结尾反转必须让对方会心一笑。');
+    } else if (f === 'targets.cfg') {
+      t.print('TARGET_HOST="203.0.113.88"', 'dim');
+      t.print('GATEWAY="192.0.2.1"', 'dim');
+      t.print('SUBNET="192.0.2.0/24"', 'dim');
+    } else {
+      t.print(`cat: ${f}: No such file or directory`, 'err');
+    }
+  } },
+  { name: 'ps', description: '查看当前活跃进程', run: ({ term: t }) => {
+    t.print('  PID TTY          TIME CMD', 'dim');
+    t.print('    1 ?        00:00:03 systemd');
+    t.print('   88 ?        00:00:01 dbus-daemon');
+    t.print('  420 ?        00:00:00 kworker/u4:0-events_unbound');
+    t.print(' 1337 pts/0    00:00:01 zsh', 'ok');
+    t.print(' 1420 pts/0    00:00:02 msfconsole', 'warn');
+    t.print(' 1984 pts/0    00:00:00 ps');
+  } },
+  { name: 'ifconfig', description: '查看网络接口配置', run: ({ term: t }) => {
+    t.print('eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500', 'dim');
+    t.print('        inet 192.0.2.15  netmask 255.255.255.0  broadcast 192.0.2.255');
+    t.print('        ether 08:00:27:12:34:56  txqueuelen 1000  (Ethernet)');
+    t.print('');
+    t.print('wlan0mon: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500', 'dim');
+    t.print('        Mode: Monitor  Frequency: 2.437 GHz  txpower 20 dBm');
+    t.print('');
+    t.print('lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536', 'dim');
+    t.print('        inet 127.0.0.1  netmask 255.0.0.0');
+  } },
+  { name: 'ping', usage: 'ping [target]', description: '向目标发送 ICMP 探测包', run: async ({ args, term: t }) => {
+    const tgt = args[0] || '192.0.2.47';
+    t.print(`PING ${tgt} (${tgt}) 56(84) bytes of data.`, 'dim');
+    for (let i = 1; i <= 4; i++) {
+      await new Promise((r) => setTimeout(r, 600));
+      const ms = (14 + Math.random() * 8).toFixed(1);
+      t.print(`64 bytes from ${tgt}: icmp_seq=${i} ttl=56 time=${ms} ms`);
+    }
+    t.print(`--- ${tgt} ping statistics ---`, 'dim');
+    t.print('4 packets transmitted, 4 received, 0% packet loss, time 2404ms', 'ok');
+  } },
+
   { name: 'eggs', hidden: true, description: '列出彩蛋（剧透）', run: ({ term: t }) => {
     allEggs.forEach((e) => t.print(`  [${e.script}] ${e.source}`, 'dim'));
     UNPARSED_EGGS.forEach((e) => t.print(`  [未解析] ${e}`, 'err'));
@@ -87,7 +151,28 @@ for (const s of SCRIPTS) term.register({
       cam.mount(document.querySelector<HTMLElement>('#cam-slot')!);
     }
     let r;
-    try { r = await runScenario(s, { term, map, barsEl, signal: ctl.signal }, vars); }
+    try {
+      r = await runScenario(s, { term, map, barsEl, signal: ctl.signal }, vars);
+      // 真实展示篡改：若为 site-takeover，无缝唤起虚拟浏览器进行 Web 篡改与互动
+      if (s.id === 'site-takeover' && !ctl.signal.aborted) {
+        await new Promise<void>((res) => {
+          const vb = new VirtualBrowser({
+            target: vars.target || 'target-corp.example',
+            onFinish: () => res(),
+          });
+          vb.mount();
+        });
+      }
+      // 拟真勒索警报：若为 ransom-prank，呼出独立全屏红黑警报窗口
+      if (s.id === 'ransom-prank' && !ctl.signal.aborted) {
+        await new Promise<void>((res) => {
+          const ra = new RansomAlert({
+            onClose: () => res(),
+          });
+          ra.mount();
+        });
+      }
+    }
     finally {
       if (cam) { cam.unmount(); document.querySelector('#map-wrap')!.classList.remove('hidden'); document.querySelector('#side-title')!.textContent = '全球追踪 // TRACE MAP'; }
     }

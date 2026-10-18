@@ -1,80 +1,76 @@
 {
   "id": "ddos-panel",
-  "tool": "WarmFlood（DDoS 面板）",
+  "tool": "BotMaster-Cluster（全球分布式流量压力测试）",
   "disclaimer": "纯属娱乐：所有数据均为虚构，本地模拟，不发出任何网络请求。不向任何真实主机发包；所有节点、流量、仪表均为本地动画。",
   "vars": {
-    "target": "用户输入的目标显示名，默认 神秘服务器"
+    "target": "用户输入的目标显示名，默认 cluster-node.example"
   },
   "lines": [
     {
       "t": 0,
-      "text": "[*] WarmFlood —— 正在召集全球『电饭煲节点』……"
+      "text": "[*] BotMaster C2 Cluster v8.1 - Connecting to 12 Command & Control nodes..."
     },
     {
-      "t": 800,
-      "text": "[*] 目标显示名：{{target}}"
+      "t": 600,
+      "text": "[*] Target designated: {{target}}:443 | Protocol: TCP-SYN-FLOOD / HTTP2-RAPID-RESET"
     },
     {
-      "t": 1400,
-      "text": "[+] 节点点亮：东京 +1 / 冰岛 +1 / 你家客厅 +1"
+      "t": 1200,
+      "text": "[+] Global botnet synchronized: Tokyo (18,400) / Frankfurt (24,100) / Ashburn (32,900)"
     },
     {
-      "t": 2200,
-      "text": "[*] 兵力汇聚中……",
+      "t": 1800,
+      "text": "[*] Ramping up outbound synthetic packet streams...",
       "progress": {
         "from": 0,
-        "to": 60,
-        "ms": 4000
+        "to": 65,
+        "ms": 3500
       }
+    },
+    {
+      "t": 5600,
+      "text": "[+] Aggregate throughput scaled: 840 Gbps | Packet Rate: 16.8 Mpps"
     },
     {
       "t": 6400,
-      "text": "[+] 当前节点：1,337 台（含 12 台智能电饭煲）"
-    },
-    {
-      "t": 7400,
-      "text": "[*] 仪表盘：12.7 Tbps（数字是瞎编的，手感很真）"
-    },
-    {
-      "t": 8600,
-      "text": "[*] 贝塞尔连线飞向目标……",
+      "text": "[*] Maximum cluster surge phase initiated...",
       "progress": {
-        "from": 60,
+        "from": 65,
         "to": 99,
-        "ms": 5000,
+        "ms": 3200,
         "stuck_at": 99,
-        "stuck_ms": 1500
+        "stuck_ms": 1600
       }
     },
     {
-      "t": 15400,
-      "text": "[!] 警报：目标负载 99% —— 正在被……温暖淹没？"
+      "t": 11400,
+      "text": "[+] Peak throughput recorded: 1.42 Tbps. Target ingress pipeline saturated."
     },
     {
-      "t": 16800,
-      "text": "[!!!] 投送完成：100,000 颗爱心已到达 {{target}}"
+      "t": 12200,
+      "text": "[!!!] TARGET RESPONSE CONFIRMED: Upstream gateway connection completed."
     }
   ],
   "twist": {
-    "popup_title": "❤️ DDoS 成功？",
-    "popup_body": "成功投送 100,000 ❤️，目标已被温暖 DDoS。\n你的节点其实都是小区里的智能电饭煲。\n对方回了你一个贴贴。",
-    "button": "贴贴收下"
+    "popup_title": "❤️ DDoS 完美反转！",
+    "popup_body": "成功向 {{target}} 投送了 1,000,000 颗爱心！\n目标服务器检测到你极其热情，并没有宕机，反而反手给你送来了一杯冰奶茶。\n（本程序零网络请求，所有流量计与世界地图连线均为本地粒子特效计算）",
+    "button": "开心喝奶茶"
   },
   "easter_eggs": [
     {
       "trigger": "command",
       "match": "cute",
-      "output": "[✨] 力度已切到『萌萌哒』：流量变成棉花糖。"
+      "output": "[✨] 力度已切至超能萌萌哒：所有发包全部替换为粉色爱心。"
     },
     {
       "trigger": "command",
-      "match": "movie",
-      "output": "[🎬] 电影级：仪表盘数字多加了两个零，依然是假的。"
+      "match": "turbo",
+      "output": "[🔥] 虚拟带宽已拉满至 100 Tbps！"
     },
     {
-      "trigger": "arg",
-      "match": "localhost",
-      "output": "[+] 对自己 DDoS：你感到了一阵莫名的温暖。"
+      "trigger": "repeat",
+      "match": "same-target-3x",
+      "output": "[!] 连续集火同一目标：对方服务器回了你一个大大的抱抱。"
     }
   ]
 }

@@ -1,84 +1,76 @@
 {
   "id": "satellite-trace",
-  "tool": "SkyEye-404（卫星追踪）",
+  "tool": "SkyTrack-TLE（低轨卫星轨道解算与定位）",
   "disclaimer": "纯属娱乐：所有数据均为虚构，本地模拟，不发出任何网络请求。不读取任何真实定位、通讯录或传感器数据。",
   "vars": {
-    "target": "用户输入的目标名，默认 神秘目标"
+    "target": "用户输入的目标代号，默认 TARGET_OBJECT_X"
   },
   "lines": [
     {
       "t": 0,
-      "text": "[*] SkyEye-404 —— 呼叫低轨卫星『摸鱼一号』……"
+      "text": "[*] SkyTrack v5.8 - Connecting to NORAD Space-Track TLE ephemeris database..."
     },
     {
-      "t": 800,
-      "text": "[*] 目标：{{target}}"
+      "t": 600,
+      "text": "[+] Ephemeris synced: SAT-ID 43015 (LEO Orbit, Alt: 512km, Inc: 51.64°)"
     },
     {
-      "t": 1400,
-      "text": "[+] 卫星过境窗口打开，信号强度：旺柴级别"
+      "t": 1200,
+      "text": "[*] Tracking target downlink signal for {{target}}..."
     },
     {
-      "t": 2200,
-      "text": "[*] 轨道校准中……",
+      "t": 1800,
+      "text": "[*] Calculating Doppler frequency shift: +2.14 kHz at carrier 2.24 GHz...",
       "progress": {
         "from": 0,
-        "to": 100,
-        "ms": 4000
+        "to": 70,
+        "ms": 3200
       }
     },
     {
-      "t": 6400,
-      "text": "[+] 扫描圈收缩：伪坐标 91.{{rand:1000-9999}}°N / 181.{{rand:1000-9999}}°E"
+      "t": 5200,
+      "text": "[+] Intersecting base station vectors: MCC 460 / MNC 00 / LAC 9214 / CID 40192"
     },
     {
-      "t": 7800,
-      "text": "[*] Zoom ×1：锁定某块大陆轮廓（手绘风）"
-    },
-    {
-      "t": 9800,
-      "text": "[*] Zoom ×2：进入『火星市』线框地图"
-    },
-    {
-      "t": 11800,
-      "text": "[*] Zoom ×3：街区贴纸展开……有一只拖鞋的形状"
-    },
-    {
-      "t": 13800,
-      "text": "[!] 精度校准：± 半个抱枕",
+      "t": 6000,
+      "text": "[*] Refining geometric error ellipse to sub-meter resolution...",
       "progress": {
-        "from": 0,
+        "from": 70,
         "to": 99,
         "ms": 2800,
         "stuck_at": 99,
-        "stuck_ms": 1200
+        "stuck_ms": 1400
       }
     },
     {
-      "t": 18200,
-      "text": "[!!!] 定位完成：火星市银河区 404 号 —— 你家沙发缝里的遥控器"
+      "t": 10400,
+      "text": "[+] Geospatial coordinates locked: 31.{{rand:1000-9999}}°N / 121.{{rand:1000-9999}}°E [Accuracy: ±1.2m]"
+    },
+    {
+      "t": 11200,
+      "text": "[!!!] TARGET LOCATION RESOLVED: High-resolution satellite snapshot rendered."
     }
   ],
   "twist": {
-    "popup_title": "🛰️ 锁定成功！",
-    "popup_body": "定位完成：火星市银河区 404 号 —— 你家沙发缝里的遥控器。\n精度：± 半个抱枕。\n卫星说它今天不想上班，只给了你一张猫爪印。",
-    "button": "去沙发缝里找找"
+    "popup_title": "🛰️ 高精卫星锁定完成！",
+    "popup_body": "高精地理测绘已完成！\n最终定位结果：火星市银河区 404 号 —— 你家沙发缝里的电视遥控器。\n卫星传感器反馈：建议你现在伸手进沙发缝摸摸看，遥控器八成就在那。\n（本程序零网络请求，坐标及地图全为本地数学动画计算生成）",
+    "button": "去沙发缝翻翻"
   },
   "easter_eggs": [
     {
       "trigger": "command",
       "match": "trace me",
-      "output": "[+] 追踪我自己：localhost / 未知维度。你人还在这儿。"
-    },
-    {
-      "trigger": "arg",
-      "match": "moon",
-      "output": "[🌙] 月球信号太吵，改推一张月亮表情包。"
+      "output": "[+] 正在追踪当前操作员：你正坐在屏幕前看着这一行字。"
     },
     {
       "trigger": "command",
+      "match": "zoom-in",
+      "output": "[+] 光学卫星镜头放大至极限：看到了一只小蚂蚁。"
+    },
+    {
+      "trigger": "repeat",
       "match": "same-target-3x",
-      "output": "[!] 同一目标追了 3 次，卫星翻了个白眼。"
+      "output": "[!] 卫星轨道频繁调整：低轨推进剂余额告急。"
     }
   ]
 }

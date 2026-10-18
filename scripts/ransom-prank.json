@@ -1,67 +1,71 @@
 {
   "id": "ransom-prank",
-  "tool": "FakeLocker（勒索弹窗整蛊）",
-  "disclaimer": "纯属娱乐：所有数据均为虚构，本地模拟，不发出任何网络请求。不锁屏、不加密任何文件、无收款诱导；可随时 ✕ / ESC 关闭，惊吓阶段 ≤15 秒自动反转。",
+  "tool": "LockPwn-Audit（高危勒索攻击模拟器）",
+  "disclaimer": "纯属娱乐：所有数据均为虚构，本地模拟，不发出任何网络请求。不锁屏、不加密任何真实文件、无收款诱导；可随时 ✕ / ESC 关闭，惊吓阶段 ≤15 秒自动反转。",
   "vars": {},
   "lines": [
     {
       "t": 0,
-      "text": "[*] FakeLocker —— 准备一张『看起来很吓人』的假警告……"
+      "text": "[*] Initiating LockPwn kernel-level vulnerability audit module..."
     },
     {
-      "t": 600,
-      "text": "[*] 安全检查：不会锁屏 ✓ 不会加密 ✓ 没有收款码 ✓"
+      "t": 500,
+      "text": "[*] Enumerating logical file system volumes (simulated sandbox)..."
     },
     {
-      "t": 1400,
-      "text": "[!] FAKE WARNING —— 你的『演示文件』看起来被锁上了（其实没有）"
+      "t": 1000,
+      "text": "[+] High-speed AES-256-CBC virtual cipher pipeline loaded."
     },
     {
-      "t": 2200,
-      "text": "[-] 毕业设计.docx.locked"
+      "t": 1500,
+      "text": "[!] WARNING: Traversing directory structures and appending virtual locks..."
     },
     {
-      "t": 2600,
-      "text": "[-] 猫片.zip.locked"
+      "t": 2000,
+      "text": "[-] Locking: /virtual_storage/finance_2026.xlsx.locked"
     },
     {
-      "t": 3000,
-      "text": "[-] 周末计划.txt.locked"
+      "t": 2400,
+      "text": "[-] Locking: /virtual_storage/system_backup_core.dat.locked"
     },
     {
-      "t": 3600,
-      "text": "[*] 倒计时：15……（按 ✕ 或 ESC 可立刻结束惊吓）",
+      "t": 2800,
+      "text": "[-] Locking: /virtual_storage/confidential_project.docx.locked"
+    },
+    {
+      "t": 3200,
+      "text": "[*] Triggering full-screen critical alert warning...",
       "progress": {
         "from": 0,
         "to": 100,
-        "ms": 12000
+        "ms": 2000
       }
     },
     {
-      "t": 16000,
-      "text": "[!!!] 解密完成：什么都没发生。真的。"
+      "t": 5400,
+      "text": "[!!!] RANSOM WARNING SCREEN BROADCASTED. Active alert sequence running."
     }
   ],
   "twist": {
-    "popup_title": "🤗 你被骗啦",
-    "popup_body": "你的文件被加密成了……一个拥抱🤗。\n赎金：今晚请吃饭。\n密钥：ILOVEYOU（其实什么都没发生）。\n勒索信作者已自首：是你朋友干的。",
-    "button": "关掉整蛊，去吃饭"
+    "popup_title": "🤗 吓一跳吧！你被骗啦",
+    "popup_body": "你的文件被加密成了……一个温暖的拥抱🤗！\n赎金要求：今晚必须请你的朋友吃顿火锅。\n解密密钥：ILOVEYOU-FOREVER\n刚才的一切全都是本地动画演出，未锁屏、未触碰你的任何真实硬盘与文件！",
+    "button": "关掉整蛊，去吃火锅"
   },
   "easter_eggs": [
     {
       "trigger": "command",
       "match": "close",
-      "output": "[OK] 整蛊已关闭。朋友的心跳还要缓缓。"
+      "output": "[OK] 整蛊警报已立刻解除，心率逐渐平稳。"
     },
     {
       "trigger": "command",
       "match": "movie-mode",
-      "output": "[🎬] 电影级惊吓已就绪（仍可一键关闭，绝不劫持浏览器）。"
+      "output": "[🎬] 电影级极速红黑模式已就绪（按 Esc 随时安全退出）。"
     },
     {
       "trigger": "command",
       "match": "pay",
-      "output": "[x] 收款码已拒绝加载：本页只收拥抱。"
+      "output": "[x] 拒绝任何转账行为：本站永远免费，只收快乐与拥抱。"
     }
   ]
 }

@@ -1,30 +1,42 @@
 {
   "id": "site-takeover",
-  "tool": "AdminGrabber Pro（入侵任意网站拿后台）",
+  "tool": "WebPwn-Framework（目标网站攻防测试）",
   "disclaimer": "纯属娱乐：所有数据均为虚构，本地模拟，不发出任何网络请求。",
   "vars": {
-    "target": "用户输入的网站名，默认 example.com"
+    "target": "用户输入的目标域名，默认 target-corp.example"
   },
   "lines": [
     {
       "t": 0,
-      "text": "[*] AdminGrabber Pro v4.0.4 —— 正在伪装成合法爬虫……"
+      "text": "[*] Initiating offensive reconnaissance against {{target}}..."
     },
     {
-      "t": 800,
-      "text": "[*] 目标：{{target}}"
+      "t": 600,
+      "text": "[*] Resolving DNS: {{target}} -> 203.0.113.{{rand:10-250}} [RFC5737 doc-net]"
     },
     {
-      "t": 1400,
-      "text": "[*] DNS 解析：{{target}} → 203.0.113.{{rand:10-250}} （RFC5737 文档地址，放心）"
+      "t": 1200,
+      "text": "[+] whatweb: [200 OK] Nginx/1.24.0, PHP/8.2.10, Title: Enterprise Gateway, X-Powered-By: PHP"
     },
     {
-      "t": 2200,
-      "text": "[+] 发现登录页：/admin/login.php?debug=true （看起来很真）"
+      "t": 1800,
+      "text": "[*] Launching dirsearch dictionary crawl on https://{{target}}/"
     },
     {
-      "t": 3000,
-      "text": "[*] 正在枚举后台路径……",
+      "t": 2400,
+      "text": "[-] [404] 142B  - /config.php.bak"
+    },
+    {
+      "t": 2800,
+      "text": "[+] [301] 178B  - /admin  ->  /admin/login.php"
+    },
+    {
+      "t": 3200,
+      "text": "[+] [200] 4.2KB - /admin/login.php [Authentication Portal Detected]"
+    },
+    {
+      "t": 3800,
+      "text": "[*] Probing SQL injection vectors on login parameters...",
       "progress": {
         "from": 0,
         "to": 100,
@@ -32,57 +44,57 @@
       }
     },
     {
-      "t": 6000,
-      "text": "[+] /wp-admin/ …… 存在（但其实是本地假路径）"
+      "t": 6800,
+      "text": "[+] sqlmap: Parameter 'username' is vulnerable to Boolean-based blind SQLi (CVE-2077-8088)"
     },
     {
-      "t": 6600,
-      "text": "[+] /manager/html …… 存在（Tomcat 的灵魂在召唤）"
+      "t": 7600,
+      "text": "[*] Extracting admin password hash from database 'db_master'..."
     },
     {
-      "t": 7200,
-      "text": "[!] 发现『万能钥匙』：Cookie session=fake-session-{{rand:1000-9999}}"
+      "t": 8400,
+      "text": "[+] Query matched: user='admin' hash='7f8b965d83b32d109f6012841b5c6e12'"
     },
     {
-      "t": 8000,
-      "text": "[*] 注入友情链接……失败。改用『心理暗示』。"
-    },
-    {
-      "t": 8800,
-      "text": "[*] 正在获取超级管理员权限……",
+      "t": 9200,
+      "text": "[*] Deploying in-memory webshell payload via CVE-2077-9102...",
       "progress": {
         "from": 0,
         "to": 99,
         "ms": 3200,
         "stuck_at": 99,
-        "stuck_ms": 1800
+        "stuck_ms": 1500
       }
     },
     {
-      "t": 14000,
-      "text": "[!!!] 后台面板已打开：http://localhost/fake-admin/{{target}}"
+      "t": 14200,
+      "text": "[!!!] msfconsole: Meterpreter session 1 opened (192.0.2.15:4444 -> 203.0.113.{{rand:10-250}}:39142)"
+    },
+    {
+      "t": 15000,
+      "text": "[+] Administrator privileges acquired. Launching virtual browser session..."
     }
   ],
   "twist": {
-    "popup_title": "🎉 拿下后台！",
-    "popup_body": "恭喜！你成功进入了……本工具自带的演示后台。\n真实的 {{target}} 毫发无伤，它甚至不知道你存在。\n管理员密码是：你猜（提示：不是 password）。",
-    "button": "我宣布自己是站长"
+    "popup_title": "🎉 拿下后台……了吗？",
+    "popup_body": "恭喜！你成功攻破了……你自己的本地虚拟浏览器。\n真实的 {{target}} 毫发无损，没有任何网络数据包离开这台电脑。\n管理员今天甚至还在摸鱼喝茶。",
+    "button": "我宣布接管此站"
   },
   "easter_eggs": [
     {
       "trigger": "arg",
-      "match": "google.com",
-      "output": "[x] Goggle 表示：先过我的验证码再说。"
+      "match": "localhost",
+      "output": "[+] 探测目标为本机回环地址（127.0.0.1）：已进入绝对安全模式。"
     },
     {
-      "trigger": "arg",
-      "match": "localhost",
-      "output": "[+] 恭喜入侵本机！（你本来就有权限）"
+      "trigger": "command",
+      "match": "shell",
+      "output": "[+] root@target-corp:~# whoami -> root (本地虚拟会话)"
     },
     {
       "trigger": "repeat",
       "match": "same-target-3x",
-      "output": "[!] 再点我就报警给隔壁猫。"
+      "output": "[!] 对同一目标连续渗透：目标防火墙表示它也很无辜。"
     }
   ]
 }
