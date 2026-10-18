@@ -10,6 +10,7 @@ export class RansomAlert {
   private secondsLeft = 180; // 3分钟倒计时
   private clockEl!: HTMLElement;
   private fileListEl!: HTMLElement;
+  private closed = false;
   private onKey = (e: KeyboardEvent) => {
     if (e.key === 'Escape') this.close();
   };
@@ -111,6 +112,8 @@ export class RansomAlert {
   }
 
   close() {
+    if (this.closed) return;
+    this.closed = true;
     clearInterval(this.timerId);
     document.removeEventListener('keydown', this.onKey);
     this.modal.remove();

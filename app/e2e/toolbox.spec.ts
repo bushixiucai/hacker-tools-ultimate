@@ -198,7 +198,7 @@ test('揭晓页：hash 状态可分享/刷新，内容只按文本渲染，再�
   await page.goto(`/#/reveal/${payload}`);
   await page.click('#reveal-again');
   await expect(page.locator('#view-tool')).toBeVisible();
-  await expect(page.locator('.term-out')).toContainText('PortStorm', { timeout: 10_000 });
+  await expect(page.locator('.term-out')).toContainText('Starting nmap', { timeout: 10_000 });
   expectClean(g);
 });
 
@@ -220,7 +220,7 @@ test('M4 摄像头：假画面网格、夜视 3x 彩蛋、✕ 关闭整蛊直接
   await page.click('.cam-close');
   const pop = page.locator('.popup:not(.disclaimer)');
   await expect(pop).toBeVisible({ timeout: 5_000 });
-  await expect(pop.locator('.close-btn')).toHaveText('给猫咪点个赞', { timeout: 5_000 });
+  await expect(pop.locator('.close-btn')).toHaveText('给橘猫喂罐头', { timeout: 5_000 });
   await pop.locator('.close-btn').click();
   await expect(page).toHaveURL(/#\/reveal\//);
   await expect(page.locator('#map-wrap')).toBeAttached();

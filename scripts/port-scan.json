@@ -103,6 +103,11 @@
       "trigger": "repeat",
       "match": "same-target-3x",
       "output": "[!] 对同一端口反复扫描：网卡已开始怀疑人生。"
+    },
+    {
+      "trigger": "click",
+      "match": "logo-click-5",
+      "output": "[♥] 已切换到 Hello Kitty 安全模式。"
     }
   ]
 }
