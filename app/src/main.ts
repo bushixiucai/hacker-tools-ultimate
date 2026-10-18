@@ -17,6 +17,7 @@ import { decodeReveal, encodeReveal, renderReveal } from './ui/reveal';
 import { SCRIPTS, UNPARSED_EGGS, fakeIp, fill, runScenario, type ScenarioScript, type Vars } from './scenario';
 
 startCodeRain(document.querySelector<HTMLCanvasElement>('#rain')!);
+document.querySelector('#sim-pill')?.addEventListener('click', () => showDisclaimer(true, 0));
 const map = new WorldMap(document.querySelector<HTMLCanvasElement>('#map')!, document.querySelector<HTMLElement>('#hops')!);
 const barsEl = document.querySelector<HTMLElement>('#bars')!;
 const panel = document.querySelector<HTMLElement>('#term-panel')!;
@@ -160,8 +161,6 @@ for (const s of SCRIPTS) term.register({
             onFinish: () => res(),
           });
           vb.mount();
-          // 自动化/录屏模式：短暂展示交互界面后自动收尾，避免阻塞 autorun
-          if (document.body.dataset.autoDismiss) setTimeout(() => vb.close(), 2000);
         });
       }
       // 拟真勒索警报：若为 ransom-prank，呼出独立全屏红黑警报窗口
@@ -171,8 +170,6 @@ for (const s of SCRIPTS) term.register({
             onClose: () => res(),
           });
           ra.mount();
-          // 自动化/录屏模式：短暂展示交互界面后自动收尾，避免阻塞 autorun
-          if (document.body.dataset.autoDismiss) setTimeout(() => ra.close(), 2000);
         });
       }
     }

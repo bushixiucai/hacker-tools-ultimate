@@ -22,17 +22,17 @@ async function guard(page: Page) {
 async function acceptDisclaimerUpfront(page: Page) {
   await page.addInitScript((k) => localStorage.setItem(k, '1'), DISCLAIMER_KEY);
 }
-/** 横幅可见且未被遮挡：位于视口顶部、不透明度 ≥ 0.6、其中心点命中横幅自身 */
-async function expectBannerVisible(page: Page) {
-  const banner = page.locator('#banner');
-  await expect(banner).toBeVisible();
-  await expect(banner).toContainText('纯属娱乐');
+/** 免责胶囊可见且未被遮挡：位于视口右下角、不透明度 ≥ 0.6、其中心点命中胶囊自身 */
+async function expectSimPillVisible(page: Page) {
+  const pill = page.locator('#sim-pill');
+  await expect(pill).toBeVisible();
+  await expect(pill).toContainText('本地模拟');
   const ok = await page.evaluate(() => {
-    const b = document.getElementById('banner')!, r = b.getBoundingClientRect();
+    const b = document.getElementById('sim-pill')!, r = b.getBoundingClientRect();
     const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    return { onTop: !!top && b.contains(top), opacity: Number(getComputedStyle(b).opacity), inView: r.top >= 0 && r.bottom <= innerHeight };
+    return { onTop: !!top && b.contains(top), opacity: Number(getComputedStyle(b).opacity), inView: r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth };
   });
-  expect(ok.onTop, '横幅被遮挡').toBe(true);
+  expect(ok.onTop, '免责胶囊被遮挡').toBe(true);
   expect(ok.opacity).toBeGreaterThanOrEqual(0.6);
   expect(ok.inView).toBe(true);
 }
@@ -48,10 +48,9 @@ test('免责声明：首访必须接受、记忆、可通过链接与命令重�
   const modal = page.locator('.disclaimer');
   await expect(modal).toBeVisible();
   await expect(modal).toContainText('本地动画');
-  await expectBannerVisible(page);
+  await expectSimPillVisible(page);
   const btn = modal.locator('button.accept');
-  await expect(btn).toBeDisabled();                       // 3 秒后才可点
-  await expect(btn).toBeEnabled({ timeout: 6000 });
+  await expect(btn).toBeEnabled();                        // 新版免责声明不再强制等待 3 秒
   await btn.click();
   await expect(modal).toHaveCount(0);
   expect(await page.evaluate((k) => localStorage.getItem(k), DISCLAIMER_KEY)).toBe('1');
@@ -63,29 +62,32 @@ test('免责声明：首访必须接受、记忆、可通过链接与命令重�
   await expect(page.locator('.disclaimer')).toBeVisible();
   await page.locator('.disclaimer button.accept').click();
   await page.locator('.inputline input').fill('disclaimer');  // 命令重新打开
-  await page.keyboard.press('Enter');
+  // 新版免责声明打开即聚焦「我已了解」；真实 Enter 会在同一按键周期内直接确认，
+  // 这里用合成 keydown 只验证命令分发，避免把“立即确认”误判为未打开
+  await page.locator('.inputline input').dispatchEvent('keydown', { key: 'Enter' });
   await expect(page.locator('.disclaimer')).toBeVisible();
   await page.locator('.disclaimer button.accept').click();
   await expect(page.locator('.disclaimer')).toHaveCount(0);
   expectClean(g);
 });
 
-test('Logo 连点 5 次彩蛋：粉色 Hello Kitty 模式', async ({ page }) => {
+test('免责胶囊：常驻右下角，点击可重新打开免责声明', async ({ page }) => {
   const g = await guard(page); await acceptDisclaimerUpfront(page);
   await page.goto('/');
-  for (let i = 0; i < 5; i++) await page.locator('h1').click();
-  await expect(page.locator('body')).toHaveClass(/kitty/);
-  await expect(page.locator('.term-out')).toContainText('Hello Kitty');
-  await expectBannerVisible(page);
+  await expectSimPillVisible(page);
+  await page.click('#sim-pill');
+  await expect(page.locator('.disclaimer')).toBeVisible();
+  await page.locator('.disclaimer button.accept').click();
+  await expect(page.locator('.disclaimer')).toHaveCount(0);
   expectClean(g);
 });
 
-test('全屏：按钮/命令切换，Esc 退出，横幅始终可见', async ({ page }) => {
+test('全屏：按钮/命令切换，Esc 退出，免责胶囊始终可见', async ({ page }) => {
   const g = await guard(page); await acceptDisclaimerUpfront(page);
   await page.goto('/');
   await page.click('#fs-btn');
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement || document.body.classList.contains('immersive'))).toBe(true);
-  await expectBannerVisible(page);
+  await expectSimPillVisible(page);
   await page.keyboard.press('Escape');
   await page.evaluate(() => document.fullscreenElement && document.exitFullscreen()); // headless 中 Esc 未必退出原生全屏
   await expect.poll(() => page.evaluate(() => !!document.fullscreenElement || document.body.classList.contains('immersive'))).toBe(false);
@@ -94,7 +96,7 @@ test('全屏：按钮/命令切换，Esc 退出，横幅始终可见', async ({ 
   await page.click('[data-nav="tool"]');
   await page.locator('.inputline input').fill('fullscreen'); await page.keyboard.press('Enter');
   await expect(page.locator('body')).toHaveClass(/immersive/);
-  await expectBannerVisible(page);
+  await expectSimPillVisible(page);
   await page.keyboard.press('Escape');
   await expect(page.locator('body')).not.toHaveClass(/immersive/);
   expectClean(g);
@@ -109,11 +111,11 @@ test('弹窗可用 Esc / 双击 关闭，且关闭前必经揭晓', async ({ pag
   await page.locator('.inputline input').fill(ids[0]); await page.keyboard.press('Enter');
   const pop = page.locator('.popup:not(.disclaimer)');
   await expect(pop).toBeVisible({ timeout: 90_000 });
-  await expectBannerVisible(page);
+  await expectSimPillVisible(page);
   await page.keyboard.press('Escape');                       // 惊吓阶段 → 先揭晓
   await expect(pop.locator('.psub')).not.toHaveText('正在注入载荷……');
   const vp = page.viewportSize()!;
-  await page.mouse.dblclick(10, vp.height - 10);              // 双击遮罩（避开顶部横幅）关闭
+  await page.mouse.dblclick(10, vp.height - 10);              // 双击遮罩（避开右下角免责胶囊）关闭
   await expect(pop).toHaveCount(0);
   expectClean(g);
 });
@@ -128,7 +130,13 @@ test.describe('每个已注册脚本跑到结尾', () => {
       const registered = (await page.locator('body').getAttribute('data-scripts'))!.split(',');
       expect(registered).toContain(id);
       await expect(page.locator('.popup:not(.disclaimer)')).toBeVisible({ timeout: 90_000 });
-      await expectBannerVisible(page);                        // 弹窗中横幅仍可见
+      await expectSimPillVisible(page);                        // 弹窗中免责胶囊仍可见
+      // 新版交互模块：site-takeover 虚拟浏览器 / ransom-prank 勒索警报需要手动收尾
+      if (id === 'site-takeover' || id === 'ransom-prank') {
+        const finish = id === 'site-takeover' ? page.locator('.vb-finish-btn') : page.locator('.ransom-esc-btn').first();
+        await expect(finish).toBeVisible({ timeout: 30_000 });
+        await finish.click();
+      }
       await expect(page.locator('body')).toHaveAttribute('data-autorun-done', '1', { timeout: 30_000 });
       await expect(page.locator('.term-out')).toContainText('[揭晓]');
       // G6：结束后进入统一揭晓页
@@ -136,7 +144,7 @@ test.describe('每个已注册脚本跑到结尾', () => {
       await expect(page.locator('#view-reveal')).toBeVisible();
       await expect(page.locator('#reveal-title')).not.toHaveText('');
       await expect(page.locator('#view-reveal .reveal-note')).toContainText('本地模拟');
-      await expectBannerVisible(page);
+      await expectSimPillVisible(page);
       expectClean(g);
     });
   }
@@ -156,7 +164,7 @@ test('首页宫格：7 张卡片、整蛊类标签、点击卡片启动剧本并
   await expect(cards).toHaveCount(INDEX.scripts.length);
   for (const sc of INDEX.scripts) await expect(page.locator(`.card[data-script="${sc.id}"]`)).toBeVisible();
   await expect(page.locator('.card[data-script="camera-takeover"] .tag')).toHaveText('整蛊类');
-  await expectBannerVisible(page);
+  await expectSimPillVisible(page);
   await page.locator('.card[data-script="port-scan"]').click();
   await expect(page.locator('#view-tool')).toBeVisible();
   await expect(page).toHaveURL(/#\/reveal\//, { timeout: 90_000 });
@@ -178,7 +186,7 @@ test('关于页：赞助入口为无 href 占位，页面无任何外部链接',
   for (const a of ext) { expect(a.inAllowed).toBe(true); expect(a.rel).toContain('noopener'); expect(a.rp).toBe('no-referrer'); }
   await page.click('#reset-settings');
   await expect(page.locator('#reset-msg')).toContainText('已清除');
-  await expectBannerVisible(page);
+  await expectSimPillVisible(page);
   expectClean(g);
 });
 
@@ -211,7 +219,7 @@ test('M4 摄像头：假画面网格、夜视 3x 彩蛋、✕ 关闭整蛊直接
   await page.goto('/#/tool/camera-takeover');
   await expect(page.locator('.cam-grid canvas')).toHaveCount(4, { timeout: 15_000 });
   await expect(page.locator('#map-wrap')).toBeHidden();
-  await expectBannerVisible(page);
+  await expectSimPillVisible(page);
   for (let i = 0; i < 3; i++) await page.click('.cam-nv');
   await expect(page.locator('.cam')).toHaveAttribute('data-nv-clicks', '3');
   await expect(page.locator('.term-out')).toContainText('眼睛疼');
@@ -244,7 +252,7 @@ test('主题：三套主题切换、命令切换、刷新后保持', async ({ pa
   await page.waitForFunction(() => !document.querySelector('.inputline input')?.hasAttribute('disabled'));
   await page.locator('.inputline input').fill('theme matrix'); await page.keyboard.press('Enter');
   await expect.poll(theme).toBe('matrix');
-  await expectBannerVisible(page);
+  await expectSimPillVisible(page);
   expectClean(g);
 });
 

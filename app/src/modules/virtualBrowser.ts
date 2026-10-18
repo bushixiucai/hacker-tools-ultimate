@@ -18,7 +18,6 @@ export class VirtualBrowser {
   private defacedEl: HTMLDivElement | null = null;
   private cleanEl: HTMLDivElement | null = null;
   private isDefaced = false;
-  private closed = false;
   private onKey = (e: KeyboardEvent) => {
     if (e.key === 'Escape') this.close();
   };
@@ -165,8 +164,6 @@ export class VirtualBrowser {
   }
 
   close() {
-    if (this.closed) return;
-    this.closed = true;
     document.removeEventListener('keydown', this.onKey);
     this.modal.remove();
     this.opts.onFinish();
