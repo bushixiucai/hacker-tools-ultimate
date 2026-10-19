@@ -12,3 +12,6 @@ qa/*.log
 
 # Generated browser verification evidence stays local.
 /output/
+
+/playwright-cli/
+/.playwright-cli/

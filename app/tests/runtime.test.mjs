@@ -124,3 +124,11 @@ test('long sessions retain bounded chronological logs and replay events with an 
   assert.equal(task.events.length, 500); assert.equal(task.events.at(-1).kind, 'result');
   assert.equal(task.events[0].value, 'record-801');
 });
+
+
+test('stop cancels a pending choice instead of leaving the session blocked', async () => {
+  for (const continuous of [false, true]) {
+    const runtime = new Runtime([definition({continuous, execute:async ctx => { await ctx.choose('Wait',[{value:'yes',label:'Yes'}]); return 'done'; }})]);
+    const task=runtime.startRun('test','stop.test');await sleep(0);runtime.stop(task.id);await settled(task);assert.equal(task.status,'cancelled');assert.equal(task.choice,undefined);
+  }
+});

@@ -37,7 +37,7 @@ function inspect(index: number, sample: string, deep: boolean): Inspection {
     case 3: {
       const classes = [/[a-z]/, /[A-Z]/, /\d/, /[^a-zA-Z0-9]/].filter(regex => regex.test(sample)).length;
       const unique = new Set(sample).size; const entropy = Math.round(sample.length * Math.log2(Math.max(2, unique)));
-      const repeated = /(.)\1{2,}|1234|password|admin/i.test(sample); const score = Math.min(100, sample.length * 4 + classes * 9 - (repeated ? 30 : 0));
+      const repeated = /(.)\1{2,}|1234|password|admin/i.test(sample); const score = Math.max(0, Math.min(100, sample.length * 4 + classes * 9 - (repeated ? 30 : 0)));
       return r([`[LENGTH] ${sample.length} characters · ${unique} unique`, `[STRUCTURE] ${classes}/4 character classes`, `[ENTROPY] ${entropy} bits · structural estimate`, ...(deep ? [`[PATTERN] ${repeated ? 'repeated/common sequence detected' : 'no repeated/common sequence detected'}`, `[RECOMMEND] ${score < 65 ? 'increase length and remove repeated patterns' : 'maintain unique use and rotation policy'}`] : []), `[RATING] ${score < 40 ? 'WEAK' : score < 65 ? 'MODERATE' : 'STRONG'} · ${score}/100`], `口令结构评分 ${score}/100；${score < 65 ? '建议增加长度并减少重复模式。' : '结构较完整，仍应保持每个服务使用不同口令。'}`, score < 65);
     }
     case 4: {

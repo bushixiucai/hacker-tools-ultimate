@@ -3,9 +3,9 @@ import { createTarget } from '../../core/profile';
 import { prepareMetadata } from '../../core/metadata';
 const definition: ModuleDefinition = {
   id: 'site-takeover', code: 'site', order: 1, name: '网站接管', category: '访问', view: 'cms', description: '分析站点入口，建立管理会话并检查内容发布。', fields: [],
-  validate(_params, target) { const valid = /^(?:[\p{L}\p{N}](?:[\p{L}\p{N}-]*[\p{L}\p{N}])?\.)+[\p{L}\p{N}-]{2,63}$/u.test(target.domain) && target.domain.split('.').every(label => label.length <= 63 && !label.startsWith('-') && !label.endsWith('-')); return valid ? {} : { target: '请输入完整网址或域名，例如 完整网址或 domain.example' }; },
+  validate(_params, target) { const valid = /^(?:[\p{L}\p{N}](?:[\p{L}\p{N}-]*[\p{L}\p{N}])?\.)+[\p{L}\p{N}-]{2,63}$/u.test(target.domain) && target.domain.split('.').every(label => label.length <= 63 && !label.startsWith('-') && !label.endsWith('-')); return valid ? {} : { target: '请输入完整网址或域名，例如 domain.example' }; },
   async execute(ctx) {
-    ctx.phase('分析站点特征', 8); const beforeKind = ctx.target.kind; await prepareMetadata(ctx.target, ctx.signal); if (beforeKind !== ctx.target.kind) { const profile = createTarget(ctx.target.domain, ctx.target.kind); ctx.target.records = profile.records; ctx.target.announcement = profile.announcement; ctx.target.originalAnnouncement = profile.announcement; } ctx.changed();
+    ctx.phase('分析站点特征', 8); const beforeKind = ctx.target.kind; await prepareMetadata(ctx.target, ctx.signal, ctx.task.targetInput); if (beforeKind !== ctx.target.kind) { const profile = createTarget(ctx.target.domain, ctx.target.kind); ctx.target.records = profile.records; ctx.target.announcement = profile.announcement; ctx.target.originalAnnouncement = profile.announcement; } ctx.changed();
     ctx.log(`HOST ${ctx.target.domain} [${ctx.target.ip}] / HTTP 200`); await ctx.wait(400);
     ctx.log(`CMS fingerprint: ${ctx.target.kind} / Content gateway available`);
     let granted = false;

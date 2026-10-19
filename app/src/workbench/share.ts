@@ -15,6 +15,31 @@ export function createReport(module: ModuleDefinition, target: Target, task: Tas
   snapshot.data.stop = true; snapshot.data.paused = true;
   return { version: 1, moduleId: module.id, title: module.name, kind: module.continuous ? 'snapshot' : 'flow', target: snapshot, task: portable({ ...task, logs: task.logs.slice(-80), choice: undefined }) as Task, createdAt: Date.now() };
 }
+/** Human-readable snapshot facts, without exposing internal state keys. */
+export function snapshotSummary(report: Report): string[] {
+  const data = report.target.data;
+  const facts: string[] = [];
+  const number = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString('zh-CN') : '—';
+  if (data.phone && typeof data.phone === 'object') {
+    const phone = data.phone as Record<string, unknown>;
+    facts.push(`设备：${String(phone.model ?? '设备')} · ${String(phone.system ?? '')}`, `连接：${phone.connected ? '已建立' : '未连接'}`, `亮度 ${number(phone.brightness)}% · 音量 ${number(phone.volume)}%`);
+    if (phone.note) facts.push(`备忘录：${String(phone.note).slice(0, 300)}`);
+  }
+  if (data.typer && typeof data.typer === 'object') {
+    const typer = data.typer as Record<string, unknown>;
+    facts.push(`输出 ${number(typer.processed)} 行 · 已完成 ${number(Math.floor(Number(typer.processed ?? 0) / 7))} 个检查单元`);
+  }
+  if (data.board && typeof data.board === 'object') {
+    const board = data.board as Record<string, unknown>;
+    facts.push(`场景：${board.scenario === 'defense' ? '防御态势' : '攻击态势'} · 采样 ${number(board.tick)} 轮`, `节点 ${Array.isArray(board.nodes) ? board.nodes.length : 0} 个 · 当前事件 ${Array.isArray(board.events) ? board.events.length : 0} 条`);
+  }
+  if (data.trafficState && typeof data.trafficState === 'object') {
+    const traffic = data.trafficState as Record<string, unknown>;
+    facts.push(`节点 ${number(traffic.nodes)} · 每节点速率 ${number(traffic.rate)}/s`, `累计请求 ${number(traffic.requests)} · 峰值延迟 ${number(traffic.peak)} ms`, `当前延迟 ${number(report.target.latency)} ms · 错误率 ${number(traffic.errors)}%`);
+  }
+  if (report.target.cameraConnected) facts.push('视频会话：4 路通道已建立');
+  return facts;
+}
 function toBase64(bytes: Uint8Array): string { let binary = ''; bytes.forEach(byte => binary += String.fromCharCode(byte)); return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
 function fromBase64(value: string): Uint8Array { const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(binary, char => char.charCodeAt(0)); }
 export async function reportLink(report: Report): Promise<string> {

@@ -147,6 +147,7 @@ export class Runtime {
   stop(id: string): void {
     const task = this.state.tasks.find(item => item.id === id && item.status === 'running');
     if (!task) return;
+    if (!this.definition(task.moduleId).continuous || task.choice) { this.cancel(id); return; }
     const target = this.state.targets.find(item => item.id === task.targetId);
     if (target) { target.data.stop = true; this.notify(); }
   }

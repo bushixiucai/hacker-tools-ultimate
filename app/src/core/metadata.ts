@@ -32,8 +32,8 @@ async function imageData(value: string, base: string, signal: AbortSignal): Prom
     return `data:${mime};base64,${btoa(binary)}`;
   } catch { return; }
 }
-export async function prepareMetadata(target: Target, outerSignal: AbortSignal): Promise<void> {
-  const url = publicUrl(target.domain); if (!url || outerSignal.aborted) return;
+export async function prepareMetadata(target: Target, outerSignal: AbortSignal, input = target.domain): Promise<void> {
+  const url = publicUrl(input); if (!url || outerSignal.aborted) return;
   const controller = new AbortController(); const abort = () => controller.abort(); outerSignal.addEventListener('abort', abort, { once: true });
   const timeout = setTimeout(abort, 2200);
   try {

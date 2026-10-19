@@ -7,7 +7,7 @@ import { Shell } from './workbench/shell';
 import { mountDetail } from './workbench/views';
 import { EXTRA_VIEWS } from './workbench/extraViews';
 import { mountQuickActions } from './workbench/quickActions';
-import { createReport, reportLink, readReport, exportReportImage, type Report } from './workbench/share';
+import { createReport, reportLink, readReport, exportReportImage, snapshotSummary, type Report } from './workbench/share';
 import { startCodeRain } from './effects/codeRain';
 import { sfx } from './effects/util';
 import { frameBust } from './ui/frameBust';
@@ -36,7 +36,7 @@ function finishTool() {
 }
 function saveDraft() { if (!selected || !app.querySelector('#module-form')) return; const data = new FormData($('#module-form') as HTMLFormElement); selected.input = String(data.get('target') ?? ''); selected.draft = Object.fromEntries([...data.entries()].filter(([key]) => key !== 'target')) as Params; }
 function setPage(name: string) {
-  pageName = name; for (const p of ['home','terminal','about','replay']) $(`#${p}-page`).classList.toggle('hidden', p !== name);
+  const changed = pageName !== name; pageName = name; if (changed) window.scrollTo(0, 0); for (const p of ['home','terminal','about','replay']) $(`#${p}-page`).classList.toggle('hidden', p !== name);
   $('#home-button').classList.toggle('active', name === 'home'); $('#terminal-button').classList.toggle('active', name === 'terminal');
   if (name !== 'terminal') { cleanupDetail?.(); cleanupDetail = undefined; detailKey = ''; }
 }
@@ -72,7 +72,7 @@ function renderForm() {
 function openTool(id: string) {
   const module = MODULES.find(m => m.id === id); if (!module) return;
   saveDraft(); cleanupDetail?.(); cleanupDetail = undefined; detailKey = ''; selected = sessionFor(module);
-  $('#tool-title').textContent = module.name; $('#tool-description').textContent = module.description; $('#shell-slot').replaceChildren(selected.host); renderForm(); setPage('terminal'); location.hash = `#/tool/${id}`; sync();
+  window.scrollTo(0, 0); $('#tool-title').textContent = module.name; $('#tool-description').textContent = module.description; $('#shell-slot').replaceChildren(selected.host); renderForm(); setPage('terminal'); location.hash = `#/tool/${id}`; sync();
 }
 function startRun(session: ToolSession, target: string, params: Params) {
   try {
@@ -131,8 +131,7 @@ async function openReplay(payload: string) {
       if (detail.childElementCount) return;
       detail.append(el('h3', '', '结果摘要'), el('p', '', report.task.result ?? report.task.error ?? report.task.phase));
       if (report.target.unlocked) { detail.append(el('h3', '', report.target.name), el('p', '', report.target.announcement)); report.target.records.forEach(row => detail.append(el('p', '', `${row.title} · ${row.detail} · ${row.status}`))); }
-      else if (report.moduleId === 'phone-control') detail.append(el('pre', '', JSON.stringify(report.target.data, null, 2).slice(0, 3000)));
-      else detail.append(el('pre', '', report.task.logs.slice(-8).join('\n')));
+      else { const facts = snapshotSummary(report); detail.append(el('pre', '', [...facts, ...report.task.logs.slice(-8)].join('\n'))); }
     };
     const next = () => { if (index < sequence.length) output.textContent += sequence[index++] + '\n'; if (index >= sequence.length) { if (timer) clearInterval(timer); showResult(); if (!revealTimer) revealTimer = setTimeout(reveal, 1800); } };
     controls.append(button('播放回放', () => { if (timer) clearInterval(timer); if (revealTimer) { clearTimeout(revealTimer); revealTimer = undefined; } if (index >= sequence.length) { index = 0; output.textContent = ''; detail.replaceChildren(); } timer = setInterval(next, 250); }), button('下一步', next), button('结束回放', reveal), button('我也体验', () => { if (timer) clearInterval(timer); openTool(module.id); }));
@@ -149,7 +148,7 @@ function route() {
   else { saveDraft(); setPage('home'); }
 }
 function bootstrap() {
-  app.innerHTML = `<header class="classic-header"><h1 class="glitch" data-text="黑客工具箱">黑客工具箱</h1><nav class="sub" aria-label="主导航"><button id="home-button">首页</button><button id="terminal-button">终端</button><button id="about-button">关于</button><button id="open-disclaimer">声明</button><button id="fs-btn">⛶ 全屏</button><button data-theme="matrix">绿</button><button data-theme="cyber">紫</button><button data-theme="alert">红</button><button id="sound-btn">音效</button></nav></header>
+  app.innerHTML = `<header class="classic-header"><h1 class="glitch" aria-label="黑客工具箱" data-text="黑客工具箱">黑客工具箱</h1><nav class="sub" aria-label="主导航"><button id="home-button">首页</button><button id="terminal-button">终端</button><button id="about-button">关于</button><button id="open-disclaimer">声明</button><button id="fs-btn">⛶ 全屏</button><button data-theme="matrix">绿</button><button data-theme="cyber">紫</button><button data-theme="alert">红</button><button id="sound-btn">音效</button></nav></header>
   <main><section id="home-page"><div class="hero"><h2>安全研究与系统分析工具集</h2><p>目标识别 · 服务探测 · 会话分析 · 态势监测</p><p class="muted">选择工具，配置目标与参数，检查执行结果。</p></div><div id="cards"></div><section class="quick-section"><h2>快速操作</h2><div id="quick-actions"></div></section></section>
   <section id="terminal-page" class="hidden"><div class="tool-heading"><h2 id="tool-title">交互式终端</h2><span id="running-note"></span><button id="new-run">新一轮</button><button id="end-tool">结束演示</button></div><p id="tool-description">选择工具以建立会话。</p><div class="classic-grid"><section class="terminal-column"><div id="shell-slot"><div class="panel detail-empty">选择下方工具开始。</div></div><div id="module-nav" class="quick"></div><details class="task-section"><summary>最近记录 <span id="history-count">0</span></summary><div id="task-list"></div></details></section><section class="operation-column"><section class="panel configuration"><div class="panel-heading">任务配置</div><form id="module-form" novalidate><div id="module-fields"></div><div id="form-errors" role="alert"></div><div class="detail-actions"><button id="start-task" type="submit">启动任务</button><button id="stop-task" type="button" class="hidden">中断任务</button></div></form><p id="task-status">等待配置</p><progress id="task-progress" max="100" value="0" aria-label="任务进度"></progress><p id="task-result" role="status"></p><div id="choice-panel"></div></section><section id="module-detail" class="panel detail"><div class="idle-map"></div></section><section class="panel share-actions"><button id="share-image">导出战报图片</button><button id="share-link">生成回放链接</button><div id="share-output" role="status"></div></section></section></div></section>
   <section id="about-page" class="hidden panel guide"><h2>操作说明</h2><p>选择工具后输入目标与参数，按执行反馈作出选择。运行期间可切换工具，返回后恢复当前会话。新一轮需要重新输入目标，各工具的记录与状态独立。</p><p>终端输入 help 查看命令，select 选择当前分支，Ctrl+C 中断。持续任务可暂停、恢复或停止；结果可以导出图片或生成回放链接。</p><h2>产品声明</h2><p>纯属娱乐，所有内容均为模拟。工具不会执行真实入侵、设备接管、文件加密或资金交易。网站工具可尝试读取公开资料用作背景，无法取得的内容由页面生成。</p><p>目标与报告仅保留在当前页面会话；刷新清空。主题与音效偏好只保存在本机。</p><button id="reset-settings">清除本地设置</button><p id="reset-msg"></p><p class="muted">创意参考 GodOfHacker，界面与流程独立实现。</p></section>
@@ -176,5 +175,10 @@ function bootstrap() {
 }
 if (!frameBust()) {
   initTheme(); initSound(); startCodeRain(document.getElementById('rain') as HTMLCanvasElement); bootstrap();
+  document.addEventListener('fullscreenchange', () => {
+    document.querySelectorAll('#fullscreen-disclosure').forEach(node => node.remove());
+    const surface = document.fullscreenElement; const original = document.getElementById('sim-pill');
+    if (surface && original && !surface.contains(original)) { const copy = original.cloneNode(true) as HTMLButtonElement; copy.id = 'fullscreen-disclosure'; copy.onclick = () => void showDisclaimer(true); surface.append(copy); }
+  });
   const disclosure = document.getElementById('sim-pill')!; disclosure.onclick = () => void showDisclaimer(true); disclosure.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void showDisclaimer(true); } }; void showDisclaimer();
 }

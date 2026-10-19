@@ -17,7 +17,7 @@ export function showDisclaimer(force = false, skipDelayMs = 0): Promise<void> {
   box.append(el('div', 'dtitle', '⚠ 免责声明 · 纯属娱乐'));
   for (const t of DISCLAIMER_TEXT) box.append(el('p', '', t));
   const btn = el('button', 'accept', '我已了解，进入工具') as HTMLButtonElement;
-  box.append(btn); ov.append(box); document.body.append(ov);
+  box.append(btn); ov.append(box); (document.fullscreenElement ?? document.body).append(ov);
   btn.focus();
   return new Promise((res) => {
     btn.onclick = () => { try { localStorage.setItem(DISCLAIMER_KEY, '1'); } catch { /* 隐私模式忽略 */ } ov.remove(); res(); };

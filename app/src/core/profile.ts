@@ -25,9 +25,9 @@ export function createTarget(input: string, kind?: SiteKind): Target {
   if (domain.includes('..')) throw new Error('目标格式不正确');
   const seed = seedOf(domain);
   const kinds: SiteKind[] = ['commerce', 'publishing', 'enterprise'];
-  const selected = kind ?? kinds[seed % kinds.length];
+  const selected = kind ?? (/shop|store|mall|market|商城/.test(domain) ? 'commerce' : /news|blog|journal|press|新闻/.test(domain) ? 'publishing' : /tech|cloud|developer|service|studio/.test(domain) ? 'enterprise' : kinds[seed % kinds.length]);
   if (!kinds.includes(selected)) throw new Error('站点类型不正确');
-  const label = domain.split('.')[0].replace(/-/g, ' ');
+  const label = domain.replace(/^www\./, '').split('.')[0].replace(/-/g, ' ');
   const suffix = { commerce: '精选商店', publishing: '观察志', enterprise: '技术服务' }[selected];
   const names = { commerce: ['轻量通勤包', '桌面收纳套装', '便携随行杯'], publishing: ['城市周末观察', '独立创作者访谈', '本月编辑推荐'], enterprise: ['数字化咨询', '系统维护方案', '客户合作计划'] }[selected];
   const announcement = { commerce: '秋日新品已上架，会员订单享包邮。', publishing: '本周专题更新，欢迎订阅编辑精选。', enterprise: '全新服务方案上线，欢迎预约咨询。' }[selected];
@@ -35,7 +35,7 @@ export function createTarget(input: string, kind?: SiteKind): Target {
   const password = ['cedar-2026', 'orbit-2026', 'harbor-2026'][seed % 3];
   return {
     id: `target-${encodeURIComponent(domain)}`, domain, seed, kind: selected, name: `${label} ${suffix}`,
-    ip: `192.0.2.${1 + seed % 253}`, services: [{ port: 22, name: 'SSH', version: `9.${seed % 7}` }, { port: 80, name: 'HTTP', version: '1.1' }, { port: 443, name: 'HTTPS', version: '1.3' }, { port: 554, name: 'RTSP', version: '1.0' }, ...(seed % 2 ? [{ port: 8080, name: 'CMS', version: '2.4' }] : [])],
+    ip: /^\d+(?:\.\d+){3}$/.test(domain) ? domain : `192.0.2.${1 + seed % 253}`, services: [{ port: 22, name: 'SSH', version: `9.${seed % 7}` }, { port: 80, name: 'HTTP', version: '1.1' }, { port: 443, name: 'HTTPS', version: '1.3' }, { port: 554, name: 'RTSP', version: '1.0' }, ...(seed % 2 ? [{ port: 8080, name: 'CMS', version: '2.4' }] : [])],
     username: 'admin', password, latitude: 20 + (seed % 2800) / 100, longitude: 90 + (seed % 4000) / 100,
     devices: ['仓储区', '机房', '装卸区'], discoveredPorts: [], scanned: false, credentials: false, unlocked: false, cameraConnected: false,
     traced: false, traffic: 0, latency: 24 + seed % 35, locked: false,

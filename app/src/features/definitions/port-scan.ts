@@ -11,9 +11,21 @@ const definition: ModuleDefinition = {
   async execute(ctx, params) {
     const ports = params.preset === 'full' ? Array.from({length:65535},(_,i)=>i+1) : params.preset === 'custom' ? parsePorts(params.ports) : [21,22,25,53,80,110,143,443,554,993,3306,3389,5432,8080];
     ctx.log(`TARGET ${ctx.target.domain} → ${ctx.target.ip} / ${ports.length} TCP ports`);
-    const rows = ports.filter(port => ctx.target.services.some(s=>s.port===port) || (ports.length < 40 || port % 4096 === 0)).map(port=> { const service = ctx.target.services.find(s=>s.port===port); return { port, state: service ? 'open' : (port + ctx.target.seed) % 5 === 0 ? 'filtered' : 'closed', name: service?.name ?? '—', version: service?.version ?? '—' }; });
-    for (let i=0;i<rows.length;i++) { await ctx.wait(params.preset === 'full' ? 180 : 90); ctx.phase(`检查端口 ${rows[i].port}`,10+80*(i+1)/rows.length); ctx.log(`${rows[i].port}/tcp ${rows[i].state.toUpperCase()} ${rows[i].name} ${rows[i].version}`); }
-    ctx.target.scanned = true; ctx.target.discoveredPorts = rows.filter(r=>r.state==='open').map(r=>r.port); ctx.target.data.scan = { rows, total: ports.length, closed: ports.length - rows.filter(r=>r.state !== 'closed').length, filtered: rows.filter(r=>r.state==='filtered').length }; ctx.target.files['/reports/services.txt'] = rows.map(r=>`${r.port}/tcp ${r.state} ${r.name} ${r.version}`).join('\n'); ctx.changed();
+    const services=new Map(ctx.target.services.map(service=>[service.port,service]));
+    let closed=0;let filtered=0;
+    const rows:Array<{port:number;state:string;name:string;version:string;fingerprint:string;response:string}>=[];
+    for(const port of ports){
+      const service=services.get(port);
+      const state=service?'open':(port+ctx.target.seed)%5===0?'filtered':'closed';
+      if(state==='closed')closed++;else if(state==='filtered')filtered++;
+      if(!service&&ports.length>=40&&port%4096!==0)continue;
+      const name=service?.name??'—',version=service?.version??'—';
+      const fingerprint=!service?'未识别':name==='SSH'?`OpenSSH ${version}`:name==='HTTPS'?`TLS ${version}`:name==='HTTP'||name==='RTSP'?`${name}/${version}`:`${name} ${version}`;
+      const response=!service?'':name==='SSH'?`SSH-2.0-OpenSSH_${version}`:name==='HTTPS'?`TLS handshake completed / TLSv${version}`:name==='RTSP'?`RTSP/${version} 200 OK`:name==='HTTP'?`HTTP/${version} 200 OK`:'HTTP/1.1 200 OK';
+      rows.push({port,state,name,version,fingerprint,response});
+    }
+    for (let i=0;i<rows.length;i++) { await ctx.wait(params.preset === 'full' ? 180 : 90); ctx.phase(`检查端口 ${rows[i].port}`,10+80*(i+1)/rows.length); ctx.log(`${rows[i].port}/tcp ${rows[i].state.toUpperCase()} ${rows[i].fingerprint}`); }
+    ctx.target.scanned = true; ctx.target.discoveredPorts = rows.filter(r=>r.state==='open').map(r=>r.port); ctx.target.data.scan = { rows, total: ports.length, closed, filtered }; ctx.target.files['/reports/services.txt'] = `Checked ${ports.length} / Open ${ctx.target.discoveredPorts.length} / Closed ${closed} / Filtered ${filtered}\n`+rows.map(r=>`${r.port}/tcp ${r.state} ${r.fingerprint}`).join('\n'); ctx.changed();
     return `已检查 ${ports.length} 个端口，${ctx.target.discoveredPorts.length} 个开放。点击报告中的端口查看详情或重新探测。`;
   },
 }; export default definition;
