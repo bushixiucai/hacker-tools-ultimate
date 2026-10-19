@@ -35,7 +35,7 @@ export interface ModuleContext {
 }
 export interface ModuleDefinition {
   id: string; name: string; code: string; description: string; category: string;
-  fields: Field[]; view?: string; order?: number; continuous?: boolean; autoReveal?: boolean; targetRequired?: boolean;
+  fields: Field[]; view?: string; order?: number; continuous?: boolean; autoReveal?: boolean; targetRequired?: boolean; reveal?: string;
   validate(params: Params, target: Target): Record<string, string | undefined>;
   execute(context: ModuleContext, params: Params): Promise<string>;
 }

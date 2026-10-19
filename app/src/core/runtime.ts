@@ -93,7 +93,7 @@ export class Runtime {
   }
   private launch(definition: ModuleDefinition, target: Target, params: Params, input: string): Task {
     this.retainHistory(target.id);
-    const task: Task = { id: `task-${Date.now().toString(36)}-${++this.sequence}`, moduleId: definition.id, targetId: target.id, title: definition.name, status: 'running', progress: 0, phase: '等待执行', logs: [], logOffset: 0, startedAt: Date.now(), params: { ...params }, targetInput: input, events: [] };
+    const task: Task = { id: `task-${Date.now().toString(36)}-${++this.sequence}`, moduleId: definition.id, targetId: target.id, title: definition.name, status: 'running', progress: 0, phase: '链路点火', logs: [], logOffset: 0, startedAt: Date.now(), params: { ...params }, targetInput: input, events: [] };
     const controller = new AbortController(); this.controllers.set(task.id, controller); this.state.tasks.push(task); this.notify();
     const aborted = () => new DOMException('Task cancelled', 'AbortError');
     const alive = () => { if (controller.signal.aborted) throw aborted(); };
@@ -129,7 +129,7 @@ export class Runtime {
       }),
     };
     void Promise.resolve().then(() => { alive(); return definition.execute(context, task.params); }).then(result => {
-      alive(); task.result = result; task.status = 'succeeded'; task.progress = 100; task.phase = '已完成'; event('result', result);
+      alive(); task.result = result; task.status = 'succeeded'; task.progress = 100; task.phase = '收工，结果在手'; event('result', result);
     }).catch(error => {
       if (controller.signal.aborted) { task.status = 'cancelled'; task.phase = '已中断'; }
       else { task.status = 'failed'; task.phase = '执行失败'; task.error = error instanceof Error ? error.message : String(error); appendLog(`ERROR ${task.error}`); event('error', task.error); }

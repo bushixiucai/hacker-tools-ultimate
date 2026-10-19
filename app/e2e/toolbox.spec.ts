@@ -24,11 +24,6 @@ async function run(page: Page, id: string, target = 'cedar.example', params: Rec
   await expect(page.locator('#task-list [data-task-id]')).toHaveCount(before+1);
   return page.locator('#task-list [data-task-id]').first();
 }
-async function choice(page: Page, value: string) {
-  const input = page.getByRole('textbox',{name:'终端输入'});
-  await expect(page.locator('#choice-panel button').first()).toBeVisible();
-  await input.fill(`select ${value}`); await input.press('Enter');
-}
 async function done(task: Locator) { await expect(task).toContainText('完成',{timeout:20_000}); }
 async function cleanPage(page: Page) {
   const errors: string[]=[]; page.on('pageerror',error=>errors.push(error.message));
@@ -70,36 +65,35 @@ test('Empty targets and invalid ranges are rejected without task mutation; scan 
 test('Password audit fails causally and retry starts fresh without another tool prerequisite',async({page})=>{
   const check=await cleanPage(page);await page.goto('/');
   const failed=await run(page,'password-bruteforce','cedar.example',{username:'nobody',dictionary:'extended'});
-  await expect(failed).toContainText('账户响应不存在');
+  await expect(failed).toContainText('需要调整');await expect(page.locator('.shell-output')).toContainText(/不存在|NOT FOUND|不存在该账户/i);
   await page.locator('#new-run').click();await expect(page.locator('#module-form [name=target]')).toHaveValue('');
-  const success=await run(page,'password-bruteforce','cedar.example',{username:'admin',dictionary:'extended'});await done(success);
-  await expect(success).toContainText('匹配');await page.locator('#end-tool').click();await expect(page.locator('#reveal-dialog')).toBeVisible();check();
+  const success=await run(page,'password-bruteforce','cedar.example',{username:'admin'});await done(success);
+  await expect(page.locator('.shell-output')).toContainText('MATCH');await page.locator('#end-tool').click();await expect(page.locator('#reveal-dialog')).toBeVisible();check();
 });
 
-test('Pending choices survive tool switching while inputs and histories stay isolated',async({page})=>{
-  await page.goto('/');const phone=await run(page,'phone-control','device-7');await expect(page.locator('#choice-panel')).toContainText('确认设备');
+test('Automatic sessions survive tool switching while inputs and histories stay isolated',async({page})=>{
+  await page.goto('/');await run(page,'phone-control','device-7');await expect(page.locator('#choice-panel button')).toHaveCount(0);
   await open(page,'port-scan');await expect(page.locator('#module-form [name=target]')).toHaveValue('');await expect(page.locator('#task-list [data-task-id]')).toHaveCount(0);
-  await open(page,'phone-control');await expect(page.locator('#choice-panel')).toContainText('确认设备');await expect(phone).toContainText('运行中');
-  await choice(page,'connect');await done(phone);
-  await open(page,'port-scan');const task=await run(page,'port-scan','other.example');await done(task);
-  await open(page,'phone-control');await expect(page.locator('#task-list [data-task-id]')).toHaveCount(1);
+  await open(page,'phone-control');await done(page.locator('#task-list [data-task-id]').first());await expect(page.getByTestId('phone-screen')).toBeVisible();
+  await open(page,'port-scan');await done(await run(page,'port-scan','other.example'));
+  await open(page,'phone-control');await expect(page.locator('#task-list [data-task-id]')).toHaveCount(1);await expect(page.locator('#module-form [name=target]')).toHaveValue('device-7');
 });
 
-test('Website uses public metadata when readable, two choices, editable CMS and explicit ending',async({page})=>{
+test('Website uses public metadata and automatically opens editable CMS with explicit ending',async({page})=>{
   const metadataRequests:string[]=[];await page.route('https://cors-fixture.example.org/**',route=>{metadataRequests.push(route.request().url());return route.fulfill({status:200,contentType:'text/html',body:'<html lang="zh-CN"><head><title>青杉生活</title><meta name="description" content="日常用品与家居精选"></head><body><h1>青杉生活</h1></body></html>'});});
   await page.goto('/');const task=await run(page,'site-takeover','https://cors-fixture.example.org/zh-CN/catalog?season=autumn');
-  await choice(page,'archive');await choice(page,'session');await choice(page,'admin');await choice(page,'session');await done(task);
-  await page.getByRole('button',{name:'进入后台',exact:true}).click();const browser=page.locator('dialog.classic-browser');await expect(browser).toBeVisible();
+  await done(task);
+  const browser=page.locator('dialog.classic-browser');await expect(browser).toBeVisible();
   expect(metadataRequests).toContain('https://cors-fixture.example.org/zh-CN/catalog?season=autumn');await expect(browser.getByLabel('站点标题')).toHaveValue('青杉生活');const announcement=browser.getByLabel('站点公告');const original=await announcement.inputValue();await announcement.fill('秋季新品现已发布');
   await browser.getByRole('button',{name:'保存修改',exact:true}).click();await browser.getByRole('button',{name:'刷新前台',exact:true}).click();
   await expect(browser).toContainText('秋季新品现已发布');await page.screenshot({path:'../output/playwright/cms-browser.png',fullPage:true});await expect(page.locator('#reveal-dialog')).toBeHidden();
   await browser.getByRole('button',{name:'恢复原始内容',exact:true}).click();await browser.getByRole('button',{name:'刷新前台',exact:true}).click();await expect(browser).toContainText(original);
-  await browser.getByRole('button',{name:'完成演示',exact:true}).click();await expect(page.locator('#reveal-dialog')).toBeVisible();
+  await browser.getByRole('button',{name:'收工，看看战果',exact:true}).click();await expect(page.locator('#reveal-dialog')).toBeVisible();
 });
 
 test('Camera has four local videos, selected-channel controls and no device requests',async({page})=>{
   const check=await cleanPage(page);await page.addInitScript(()=>{Object.defineProperty(window,'__deviceAccess',{value:0,writable:true});if(navigator.mediaDevices)navigator.mediaDevices.getUserMedia=()=>{(window as unknown as {__deviceAccess:number}).__deviceAccess++;return Promise.reject(new Error('Unexpected device access'));};});
-  await page.goto('/');await run(page,'camera-takeover','仓储东区');await choice(page,'0');
+  await page.goto('/');await run(page,'camera-takeover','仓储东区');
   await expect(page.locator('.camera-grid video')).toHaveCount(4);await page.screenshot({path:'../output/playwright/camera-grid.png',fullPage:true});const video=page.locator('.camera-grid video').first();
   await expect.poll(()=>video.evaluate((node:HTMLVideoElement)=>node.readyState)).toBeGreaterThanOrEqual(2);
   await page.getByRole('button',{name:'下一通道',exact:true}).click();await page.getByRole('button',{name:'放大',exact:true}).click();
@@ -108,10 +102,10 @@ test('Camera has four local videos, selected-channel controls and no device requ
   await page.locator('#end-tool').click();await expect(page.locator('#reveal-dialog')).toBeVisible();check();
 });
 
-test('Satellite requires coherent sampling then exposes continuous map levels',async({page})=>{
-  const check=await cleanPage(page);await page.goto('/');const task=await run(page,'satellite-trace','13800138000');
-  await choice(page,'stable');await choice(page,'confirm');await expect(page.locator('.shell-output')).toContainText('Precision threshold');
-  await expect(page.locator('#module-detail')).toContainText('采样 1');await choice(page,'sample');await expect(page.locator('#module-detail')).toContainText('采样 2');await choice(page,'sample');await choice(page,'confirm');await done(task);
+test('Satellite automatically integrates three samples and exposes continuous map levels',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');const task=await run(page,'satellite-trace','13800138000');await done(task);
+  await expect(page.locator('#choice-panel button')).toHaveCount(0);await expect(page.locator('.detail-location-report')).toContainText('3 samples');
+  await expect(page.locator('.trace-level-2')).toBeVisible();
   for(const label of ['全球','城市','街区'])await page.getByRole('button',{name:label,exact:true}).click();check();
 });
 
@@ -121,30 +115,29 @@ test('Traffic parameters affect response, pause/resume and graceful stop',async(
   await page.getByRole('button',{name:'暂停 / 恢复',exact:true}).click();await page.getByRole('button',{name:'停止负载',exact:true}).click();await done(task);check();
 });
 
-test('Ransom requires confirmation and Escape restores and reveals immediately',async({page})=>{
-  const check=await cleanPage(page);await page.goto('/');await run(page,'ransom-prank','');await choice(page,'start');
+test('Ransom starts immediately and Escape restores and reveals immediately',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');await run(page,'ransom-prank','');
   await expect(page.getByRole('button',{name:/立即解除/})).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('#reveal-dialog')).toBeVisible();check();
 });
 
-test('WiFi wrong channel cannot progress, valid handshake and candidate set complete',async({page})=>{
-  const check=await cleanPage(page);await page.goto('/');const task=await run(page,'wifi-crack','Office');await choice(page,'ap-0');
-  const prompt=await page.locator('#choice-panel').innerText();const channel=prompt.match(/频道 (\d+) · 目标频道/)?.[1];expect(channel).toBeTruthy();
-  await choice(page,channel==='1'?'6':'1');await choice(page,'stable');await expect(page.locator('.shell-output')).toContainText('NO EAPOL');
-  await choice(page,channel!);await choice(page,'stable');await choice(page,'extended');await done(task);check();
+test('WiFi automatically selects a coherent channel, captures handshake and expands exhausted candidates',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');const task=await run(page,'wifi-crack','Office');await done(task);
+  await expect(page.locator('#choice-panel button')).toHaveCount(0);await expect(page.locator('.shell-output')).toContainText('EAPOL 4/4');
+  await expect(page.locator('#module-detail')).toContainText(/匹配|MATCHED/i);check();
 });
 
 test('Typer advances only with input and phone notes/settings keep actual state',async({page})=>{
   const check=await cleanPage(page);await page.goto('/');await run(page,'hacker-typer','',{scene:'diagnostic'});
   const metrics=page.getByTestId('typer-metrics');await expect(metrics).toBeVisible();const before=(await metrics.textContent())!;await page.waitForTimeout(700);await expect(metrics).toHaveText(before);
-  await page.getByRole('button',{name:'推进代码',exact:true}).click();await expect(metrics).not.toHaveText(before);
-  const phone=await run(page,'phone-control','device-9');await choice(page,'connect');await done(phone);
+  await page.getByRole('button',{name:'再来一波',exact:true}).click();await expect(metrics).not.toHaveText(before);
+  const phone=await run(page,'phone-control','device-9');await done(phone);
   await page.getByRole('button',{name:/备忘录/}).click();await page.getByTestId('phone-note').fill('现场检查已完成');await page.getByRole('button',{name:'保存备忘录',exact:true}).click();
   await expect(page.getByTestId('phone-note')).toHaveValue('现场检查已完成');check();
 });
 
 test('Wallet validates chain address and opens assets and confirmed transaction records',async({page})=>{
   const check=await cleanPage(page);await page.goto('/');await open(page,'wallet-search');await page.locator('#module-form [name=target]').fill('bad-address');await page.locator('#module-form button[type=submit]').click();await expect(page.locator('#form-errors')).not.toBeEmpty();
-  const task=await run(page,'wallet-search','NVA-7F2A9C18',{strategy:'extended'});await choice(page,'run');await done(task);
+  const task=await run(page,'wallet-search','NVA-7F2A9C18',{strategy:'extended'});await done(task);
   await page.getByRole('button',{name:'交易记录',exact:true}).click();await expect(page.locator('#module-detail')).toContainText('已确认');await page.getByRole('button',{name:'资产',exact:true}).click();await expect(page.locator('#module-detail')).toContainText('Nova');check();
 });
 
@@ -154,8 +147,8 @@ test('Board supports defense scene, filtering, focus and pause',async({page})=>{
   await page.getByRole('button',{name:'暂停推进',exact:true}).click();await page.getByRole('button',{name:'恢复推进',exact:true}).click();check();
 });
 
-test('Shell escapes user input and Ctrl+C cancels the actual waiting task',async({page})=>{
-  const check=await cleanPage(page);await page.goto('/');await run(page,'phone-control','device-11');
+test('Shell escapes user input and Ctrl+C cancels the actual running task',async({page})=>{
+  const check=await cleanPage(page);await page.goto('/');await run(page,'ddos-panel','device-11');await expect(page.locator('.traffic-response')).toBeVisible();
   const input=page.getByRole('textbox',{name:'终端输入'});await input.fill('<img src=x onerror=alert(1)>');await input.press('Enter');
   await expect(page.locator('.shell-output')).toContainText('<img src=x onerror=alert(1)>');await expect(page.locator('.shell-output img')).toHaveCount(0);
   await input.press('Control+c');await expect(page.locator('#task-list [data-task-id]').first()).toContainText('已中断');await expect(page.locator('#choice-panel button')).toHaveCount(0);check();
@@ -163,9 +156,9 @@ test('Shell escapes user input and Ctrl+C cancels the actual waiting task',async
 
 for(const viewport of [{width:320,height:740},{width:390,height:844},{width:844,height:390}])test(`Mobile layout keeps all tools operable at ${viewport.width}x${viewport.height}`,async({page})=>{
   await page.setViewportSize(viewport);await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/');
-  for(const id of MODULES){await open(page,id);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),id).toBe(true);await expect(page.locator('#module-form button[type=submit]')).toBeVisible();}
+  for(const id of MODULES){await open(page,id);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),id).toBe(true);await expect(page.locator('#module-form button[type=submit]')).toBeVisible();for(const field of await page.locator('#module-form [name]:not([name=target])').all())await expect(field).toBeHidden();}
   await done(await run(page,'port-scan','mobile.example',{preset:'custom',ports:'22,443'}));
-  const phone=await run(page,'phone-control','mobile-device');await choice(page,'connect');await done(phone);await page.screenshot({path:`../output/playwright/phone-home-${viewport.width}.png`,fullPage:true});
+  const phone=await run(page,'phone-control','mobile-device');await done(phone);await page.screenshot({path:`../output/playwright/phone-home-${viewport.width}.png`,fullPage:true});
   await page.getByRole('button',{name:/备忘录/}).click();await page.getByTestId('phone-note').fill('移动端检查');await page.getByRole('button',{name:'保存备忘录',exact:true}).click();await expect(page.getByTestId('phone-note')).toHaveValue('移动端检查');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   const pill=page.locator('#sim-pill');await expect(pill).toBeVisible();expect(await pill.evaluate(node=>{const r=node.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight;})).toBe(true);
@@ -197,9 +190,9 @@ for (const behavior of ['denied', 'timeout']) test(`Website ${behavior} metadata
     await route.fulfill({status:200,contentType:'text/html',body:'<title>Delayed response</title>'}).catch(()=>{});
   });
   await page.goto('/');const task=await run(page,'site-takeover',`https://metadata-${behavior}.example.org`);
-  await choice(page,'api');await choice(page,'session');await done(task);
+  await done(task);
   await expect(page.locator('#form-errors')).toBeEmpty();await expect(page.locator('.shell-output')).not.toContainText(/降级|读取失败|fallback/i);
-  await page.getByRole('button',{name:'进入后台',exact:true}).click();await expect(page.locator('dialog.classic-browser')).toBeVisible();
+  await expect(page.locator('dialog.classic-browser')).toBeVisible();
 });
 
 for(const [id,input,params] of [
@@ -213,21 +206,21 @@ for(const [id,input,params] of [
   await page.locator('#end-tool').click();await expect(page.locator('#reveal-dialog')).toBeVisible();await page.locator('#reveal-dialog button').click();
 });
 
-test('Ending a pending tool cancels its choice and permits a clean subsequent session',async({page})=>{
-  await page.goto('/');const old=await run(page,'phone-control','old-device');await expect(page.locator('#choice-panel button')).not.toHaveCount(0);
+test('Ending an automatic session cancels execution and permits a clean subsequent session',async({page})=>{
+  await page.goto('/');const old=await run(page,'ddos-panel','old-device');await expect(page.locator('.traffic-response')).toBeVisible();
   await page.locator('#end-tool').click();await expect(page.locator('#reveal-dialog')).toBeVisible();await page.locator('#reveal-dialog button').click();
   await expect(old).toContainText('已中断');await expect(page.locator('#choice-panel button')).toHaveCount(0);await expect(page.locator('#module-form [name=target]')).toHaveValue('');
-  const fresh=await run(page,'phone-control','new-device');await choice(page,'connect');await done(fresh);await expect(page.getByTestId('phone-screen')).toContainText(/\d{2}:\d{2}/);
+  const fresh=await run(page,'phone-control','new-device');await done(fresh);await expect(page.getByTestId('phone-screen')).toContainText(/\d{2}:\d{2}/);
 });
 
 test('Ended camera sessions release media and do not restart on return',async({page})=>{
-  await page.goto('/');await run(page,'camera-takeover','camera-closed');await choice(page,'0');await expect(page.locator('.camera-grid video')).toHaveCount(4);
+  await page.goto('/');await run(page,'camera-takeover','camera-closed');await expect(page.locator('.camera-grid video')).toHaveCount(4);
   await page.locator('#end-tool').click();await page.locator('#reveal-dialog button').click();await expect(page.locator('#module-detail video')).toHaveCount(0);
   await open(page,'port-scan');await open(page,'camera-takeover');await expect(page.locator('#module-detail video')).toHaveCount(0);await expect(page.locator('#module-detail')).toContainText('会话已结束');
 });
 
 test('Background ransom restoration reveals when its tool is reopened',async({page})=>{
-  await page.goto('/');await run(page,'ransom-prank','');await choice(page,'start');await expect(page.getByRole('button',{name:/立即解除/})).toBeVisible();
+  await page.goto('/');await run(page,'ransom-prank','');await expect(page.getByRole('button',{name:/立即解除/})).toBeVisible();
   await open(page,'port-scan');await expect(page.locator('#reveal-dialog')).toBeHidden();await expect(page.locator('#running-note')).toHaveText('',{timeout:15_000});
   await open(page,'ransom-prank');await expect(page.locator('#reveal-dialog')).toBeVisible();await expect(page.locator('#reveal-dialog')).toContainText('没有读取、加密或修改');
 });
@@ -246,17 +239,17 @@ test('Replay completion automatically reveals and a second playback restarts the
 });
 
 test('Mobile CMS uses touch-sized controls in a readable native browser dialog',async({page})=>{
-  await page.setViewportSize({width:390,height:844});await page.goto('/');await run(page,'site-takeover','mobile-shop.example');await choice(page,'admin');await choice(page,'session');await page.getByRole('button',{name:'进入后台',exact:true}).click();
+  await page.setViewportSize({width:390,height:844});await page.goto('/');await run(page,'site-takeover','mobile-shop.example');
   const dialog=page.locator('dialog.classic-browser');await expect(dialog).toBeVisible();
   const dimensions=await dialog.locator('button').evaluateAll(buttons=>buttons.map(button=>({text:button.textContent,height:button.getBoundingClientRect().height,width:button.getBoundingClientRect().width})));
   for(const control of dimensions){expect(control.height,control.text??'').toBeGreaterThanOrEqual(44);expect(control.width,control.text??'').toBeGreaterThanOrEqual(44);}
   expect(await dialog.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true);await page.screenshot({path:'../output/playwright/cms-mobile-390.png',fullPage:true});
-  await dialog.getByRole('button',{name:'完成演示',exact:true}).click();await expect(page.locator('#reveal-dialog')).toBeVisible();
+  await dialog.getByRole('button',{name:'收工，看看战果',exact:true}).click();await expect(page.locator('#reveal-dialog')).toBeVisible();
 });
 
 
 test('Review: camera channel settings and status stay scoped to the selected feed',async({page})=>{
-  await page.goto('/');await run(page,'camera-takeover','仓储东区');await choice(page,'0');
+  await page.goto('/');await run(page,'camera-takeover','仓储东区');
   await expect.poll(()=>page.locator('.camera-grid video').first().evaluate((v:HTMLVideoElement)=>v.readyState)).toBeGreaterThanOrEqual(2);
   await page.getByRole('button',{name:'放大',exact:true}).click();await page.getByRole('button',{name:'夜视开关',exact:true}).click();
   const before=await page.locator('.camera-grid video').first().getAttribute('style');
@@ -274,7 +267,7 @@ test('Review: stopped traffic clears error metrics and disables session controls
 });
 
 test('Review: phone wallpaper resolves and mobile editor remains readable',async({page})=>{
-  await page.setViewportSize({width:390,height:844});await page.goto('/');const task=await run(page,'phone-control','review-device');await choice(page,'connect');await done(task);
+  await page.setViewportSize({width:390,height:844});await page.goto('/');const task=await run(page,'phone-control','review-device');await done(task);
   const url=await page.getByTestId('phone-screen').evaluate(n=>getComputedStyle(n).backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1]);
   expect(url).toContain('/media/phone-lake.webp');expect(url).not.toContain('/assets/media/');expect((await page.request.get(url!)).ok()).toBe(true);
   await page.getByRole('button',{name:/备忘录/}).click();expect(await page.locator('.extra-phone-screen textarea').evaluate(n=>getComputedStyle(n).fontSize)).toBe('16px');
@@ -283,14 +276,14 @@ test('Review: phone wallpaper resolves and mobile editor remains readable',async
 test('Review: board focus and filters survive switching and typer idles at zero',async({page})=>{
   await page.goto('/');await run(page,'situation-board','review-center');await page.getByTestId('board-filter').selectOption('high');await page.getByTestId('board-focus').selectOption('N2');
   await open(page,'port-scan');await open(page,'situation-board');await expect(page.getByTestId('board-filter')).toHaveValue('high');await expect(page.getByTestId('board-focus')).toHaveValue('N2');await expect(page.locator('#module-detail .extra-row')).toContainText('N2');
-  await run(page,'hacker-typer','');await page.getByRole('button',{name:'推进代码',exact:true}).click();await expect(page.getByTestId('typer-metrics')).toContainText('1');await expect(page.getByTestId('typer-metrics')).toContainText('0 行/s',{timeout:5000});
-  await page.locator('#stop-task').click();await expect(page.getByRole('button',{name:'推进代码',exact:true})).toBeDisabled();
+  await run(page,'hacker-typer','');await page.getByRole('button',{name:'再来一波',exact:true}).click();await expect(page.getByTestId('typer-metrics')).toContainText('1');await expect(page.getByTestId('typer-metrics')).toContainText('0 行/s',{timeout:5000});
+  await page.locator('#stop-task').click();await expect(page.getByRole('button',{name:'再来一波',exact:true})).toBeDisabled();
 });
 
 test('Review: lower home cards open at the input area and landscape CMS stays touch sized',async({page})=>{
   await page.setViewportSize({width:390,height:844});await page.goto('/');await page.locator('#cards [data-module="wallet-search"]').click();
   await expect.poll(()=>page.evaluate(()=>window.scrollY)).toBe(0);expect((await page.locator('#module-form').boundingBox())!.y).toBeGreaterThan(0);
-  const task=await run(page,'site-takeover','touch-shop.example');await choice(page,'admin');await choice(page,'session');await done(task);await page.getByRole('button',{name:'进入后台',exact:true}).click();await page.setViewportSize({width:844,height:390});
+  const task=await run(page,'site-takeover','touch-shop.example');await done(task);await page.setViewportSize({width:844,height:390});
   const dimensions=await page.locator('dialog.classic-browser button').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().height));expect(dimensions.length).toBeGreaterThan(4);expect(dimensions.every(height=>height>=44)).toBe(true);
 });
 
@@ -301,4 +294,11 @@ test('Review: fullscreen board keeps its disclosure accessible',async({page,brow
   await expect(page.locator('#fullscreen-disclosure')).toBeVisible();await page.locator('#fullscreen-disclosure').click();await expect(page.locator('.disclaimer')).toBeVisible();
   expect(await page.evaluate(()=>document.fullscreenElement?.contains(document.querySelector('.disclaimer')))).toBe(true);
   await page.getByRole('button',{name:'我已了解，进入工具'}).click();await page.evaluate(()=>document.exitFullscreen());await expect(page.locator('#fullscreen-disclosure')).toHaveCount(0);
+});
+
+
+test('Automatic CMS only opens on return and closes without reopening',async({page})=>{
+  await page.goto('/');const task=await run(page,'site-takeover','auto-shop.example');await open(page,'port-scan');await page.waitForTimeout(2600);await expect(page.locator('dialog.classic-browser')).toHaveCount(0);
+  await open(page,'site-takeover');await done(task);await expect(page.locator('dialog.classic-browser')).toBeVisible();await page.locator('dialog.classic-browser').getByRole('button',{name:'关闭',exact:true}).click();await page.locator('#reveal-dialog button').click();
+  await open(page,'port-scan');await open(page,'site-takeover');await expect(page.locator('dialog.classic-browser')).toHaveCount(0);
 });

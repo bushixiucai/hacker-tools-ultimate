@@ -1,27 +1,21 @@
 import type { ModuleDefinition } from '../../core/types';
 import { accessPoints } from '../extraData';
 const definition: ModuleDefinition = {
- id: 'wifi-crack', code: 'wifi', name: 'WiFi 破解', category: '无线', description: '发现接入点，采集握手并检查候选匹配。', view: 'wifi', order: 8,
+ id: 'wifi-crack', code: 'wifi', name: 'WiFi 破解', category: '无线', description: '锁定目标网络，自动追频、补齐握手，一路撞穿候选空间。', view: 'wifi', order: 8,
+ reveal:'无线大门轰然打开——门后蹲着一只正在啃网线的仓鼠。4096 条候选全是它昨晚的宵夜菜单，你刚刚把路由器吃到的那口饭破译了。',
  fields: [], validate(_p,t) { return t.domain.trim().length > 80 ? {target:'网络关键词不能超过 80 个字符'} : {}; },
  async execute(ctx) {
-  const aps = accessPoints(ctx.target); ctx.target.data.wifi = {aps,stage:'discovery'}; ctx.phase('发现接入点',10); ctx.log(`RADIO INDEX ${aps.length} ACCESS POINTS`); ctx.changed();
-  const id = await ctx.choose('选择接入点',aps.map(ap=>({value:ap.id,label:`${ap.name} · CH ${ap.channel} · ${ap.signal} dBm · ${ap.security}`})));
-  const ap=aps.find(a=>a.id===id)!; const state=ctx.target.data.wifi as Record<string,unknown>; state.selected=id; state.stage='capture'; ctx.changed();
-  let valid=false;
-  while(!valid) {
-   const channel=await ctx.choose(`配置监听频道 · ${ap.name}`, [1,6,11,36].map(ch=>({value:String(ch),label:`频道 ${ch}${ch===ap.channel?' · 目标频道':''}`})));
-   const capture=await ctx.choose(`采集方式 · 信号 ${ap.signal} dBm`,[{value:'quick',label:'快速采样 · 低信号可能丢失握手'},{value:'stable',label:'延长采样 · 信号整合'}]);
-   ctx.phase('采集握手',30); await ctx.wait(capture==='stable'?950:450); valid=Number(channel)===ap.channel && (ap.signal>=-65 || capture==='stable');
-   state.handshake=valid; state.channel=Number(channel); state.stage=valid?'dictionary':'capture'; ctx.log(valid?'EAPOL 4/4 · HANDSHAKE VERIFIED':Number(channel)!==ap.channel?`CHANNEL ${channel} · NO EAPOL · TARGET CH ${ap.channel}`:`EAPOL 2/4 · RSSI ${ap.signal} dBm · 延长采样可补齐握手`); ctx.changed();
+  const aps=accessPoints(ctx.target); const ap=aps[0]; const state={aps,stage:'discovery',selected:ap.id,channel:ap.channel,handshake:false,dictionary:'common',attempts:0,matched:false};ctx.target.data.wifi=state;
+  ctx.phase('扫开频谱，锁定主接入点',10);ctx.log(`RADIO LOCK · ${ap.name} · CH ${ap.channel} · RSSI ${ap.signal} dBm`);ctx.changed();await ctx.wait(450);
+  state.stage='capture';ctx.phase('频道已咬住，截取握手',28);ctx.log(`AUTO TUNE CH ${ap.channel} · EAPOL CAPTURE ARMED`);ctx.changed();await ctx.wait(450);
+  if(ap.signal < -65){ctx.log(`EAPOL 2/4 · RSSI ${ap.signal} dBm · 信号太弱？拉长窗口，别想甩掉我。`);ctx.phase('整合弱信号，补齐缺帧',35);await ctx.wait(650);}
+  state.handshake=true;state.stage='search';ctx.log('EAPOL 4/4 · HANDSHAKE VERIFIED · 四帧到齐，候选空间开门。');ctx.changed();
+  for(const dictionary of ['common','extended']){
+   state.dictionary=dictionary;state.attempts++;ctx.changed();const total=dictionary==='common'?512:4096;
+   for(let i=1;i<=4;i++){await ctx.wait(180);ctx.phase(dictionary==='common'?'常用口令火力覆盖':'扩展字典接管，继续撕开',45+i*10);ctx.log(`KEY CHECK ${Math.round(i/4*total)}/${total} · EAPOL VERIFIED`);}
+   if(dictionary===ap.dictionary||dictionary==='extended'){state.matched=true;break;}
+   ctx.log('WORDLIST EXHAUSTED · 常用集没咬住。扩展规则已装填，第二轮直接上。');
   }
-  let matched=false; let attempts=0;
-  while(!matched) {
-   const dictionary=await ctx.choose('选择候选集',[{value:'common',label:'常用口令 · 512 条'},{value:'extended',label:'扩展网络口令 · 4096 条'}]);
-   state.dictionary=dictionary; state.stage='search'; ctx.changed();
-   for(let i=1;i<=5;i++){ await ctx.wait(260); ctx.phase('校验候选',45+i*9); ctx.log(`KEY CHECK ${Math.round(i/5*(dictionary==='common'?512:4096))} · EAPOL VERIFIED`); }
-   attempts++; matched=dictionary===ap.dictionary || dictionary==='extended'; state.attempts=attempts; state.stage=matched?'matched':'exhausted'; ctx.changed();
-   if(!matched) ctx.log('WORDLIST EXHAUSTED · 扩展候选集覆盖设备配置规则，请更换后重试');
-  }
-  state.matched=true; ctx.changed(); return `${ap.name} · 握手有效，候选匹配完成；共执行 ${attempts} 轮校验。`;
+  state.stage='matched';ctx.changed();return `${ap.name} 已拿下。频道 ${ap.channel}、有效握手、${state.attempts} 轮校验全部对上，无线大门现在听你的。`;
  }
 }; export default definition;

@@ -132,3 +132,58 @@ test('stop cancels a pending choice instead of leaving the session blocked', asy
     const task=runtime.startRun('test','stop.test');await sleep(0);runtime.stop(task.id);await settled(task);assert.equal(task.status,'cancelled');assert.equal(task.choice,undefined);
   }
 });
+
+test('built-in scripts never block on an interactive choice', () => {
+  const directory = resolve(import.meta.dirname, '../src/features/definitions');
+  for (const filename of readdirSync(directory).filter(name => name.endsWith('.ts'))) {
+    assert.doesNotMatch(readFileSync(resolve(directory, filename), 'utf8'), /\bctx\s*\.\s*choose\s*\(/, filename);
+  }
+});
+
+test('all twelve default scripts automatically reach their usable result state', async () => {
+  const checks = {
+    'site-takeover': target => assert.equal(target.unlocked, true),
+    'port-scan': target => assert.equal(target.scanned, true),
+    'password-bruteforce': target => assert.equal(target.credentials, true),
+    'camera-takeover': target => { assert.equal(target.cameraConnected, true); assert.equal(target.devices.length, 4); },
+    'satellite-trace': target => { assert.equal(target.traced, true); assert.equal(target.data.trace.samples, 3); assert.equal(target.data.traceLevel, 2); },
+    'ransom-prank': target => { assert.ok(target.data.ransom.deadline > 0); assert.equal(target.locked, false); },
+    'ddos-panel': target => assert.ok(target.data.trafficState.samples.length > 0),
+    'wifi-crack': target => { assert.equal(target.data.wifi.handshake, true); assert.equal(target.data.wifi.matched, true); },
+    'hacker-typer': target => assert.equal(target.data.typer.scene, 'diagnostic'),
+    'phone-control': target => assert.equal(target.data.phone.connected, true),
+    'wallet-search': target => assert.equal(target.data.wallet.matched, true),
+    'situation-board': target => assert.ok(target.data.board.tick > 0),
+  };
+  for (const module of MODULES) {
+    const target = createTarget(module.id === 'wallet-search' ? 'NVA-7F2A9C18' : 'cedar.example');
+    const params = Object.fromEntries(module.fields.filter(field => field.default !== undefined).map(field => [field.key, field.default]));
+    assert.deepEqual(module.validate(params, target), {}, `${module.id}: valid defaults`);
+    let waits = 0;
+    const logs = [];
+    const context = {
+      target, task: { targetInput: target.domain }, signal: new AbortController().signal,
+      log: message => logs.push(message), phase: () => {}, changed: () => {},
+      choose: async () => { assert.fail(`${module.id} requested a manual decision`); },
+      wait: async () => {
+        waits++;
+        // Fast-forward continuous playback after it has produced actual samples.
+        if (['ddos-panel', 'hacker-typer', 'situation-board'].includes(module.id) && waits >= 4) target.data.stop = true;
+        if (module.id === 'ransom-prank') target.locked = false;
+        assert.ok(waits < 100, `${module.id}: automatic execution must terminate`);
+      },
+    };
+    const result = await module.execute(context, params);
+    assert.equal(typeof result, 'string', `${module.id}: returns a report`);
+    assert.ok(result.length > 0, `${module.id}: report is nonempty`);
+    checks[module.id](target);
+  }
+});
+
+test('wallet infers either supported network from its address without configuration', async () => {
+  const module = MODULES.find(item => item.id === 'wallet-search');
+  const defaults = Object.fromEntries(module.fields.filter(field => field.default !== undefined).map(field => [field.key, field.default]));
+  for (const address of ['NVA-7F2A9C18', 'AST-4B8D2E16']) {
+    assert.deepEqual(module.validate(defaults, createTarget(address)), {}, address);
+  }
+});

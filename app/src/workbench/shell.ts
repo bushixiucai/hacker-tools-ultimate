@@ -32,7 +32,7 @@ export class Shell {
       else if (e.key === 'ArrowDown') { e.preventDefault(); this.cursor = Math.min(this.history.length, this.cursor + 1); this.input.value = this.history[this.cursor] ?? ''; }
       else if (e.key === 'Tab') { e.preventDefault(); const matches = ['help','run','status','select','pause','resume','stop','cancel','jobs','ls','cat','clear','end',module.code,module.id].filter(s => s.startsWith(this.input.value)); if (matches.length === 1) this.input.value = matches[0] + ' '; else this.print(matches.join('  ')); }
     };
-    this.print(`${module.code.toUpperCase()} / Console ready. Type help to inspect commands.`, 'muted'); this.unsubscribe = runtime.subscribe(() => this.sync()); this.sync();
+    this.print(`${module.code.toUpperCase()} / 控制台已武装。run 开干，help 查装备。`, 'muted'); this.unsubscribe = runtime.subscribe(() => this.sync()); this.sync();
   }
   destroy() { this.unsubscribe(); }
   print(value: string, kind = '') { const line = document.createElement('div'); line.className = `shell-line ${kind}`; line.textContent = value; this.output.append(line); while (this.output.childElementCount > 500) this.output.firstElementChild?.remove(); this.output.scrollTop = this.output.scrollHeight; }
@@ -45,7 +45,7 @@ export class Shell {
     try {
       const [name, ...args] = tokenize(raw); const target = this.runtime.activeTarget; const task = [...this.runtime.state.tasks].reverse().find(t => t.status === 'running');
       if (['run','start',this.module.code,this.module.id].includes(name)) { const input = this.module.targetRequired === false ? '' : args.shift() ?? ''; this.start(input, moduleParams(this.module, args)); }
-      else if (name === 'help') { this.print(`run ${this.module.targetRequired === false ? '' : '<target> '}[--option=value]\nselect <value> · status · jobs · pause · resume · stop · cancel\nls · cat <path> · clear · end`); this.module.fields.forEach(f => this.print(`--${f.key} ${f.label}${f.default ? ` [${f.default}]` : ''}${f.options ? ' ' + f.options.map(o => o.value).join('|') : ''}`, 'muted')); }
+      else if (name === 'help') { this.print(`run ${this.module.targetRequired === false ? '' : '<target> '}[--option=value]\nstatus · jobs · pause · resume · stop · cancel\nls · cat <path> · clear · end`); this.module.fields.forEach(f => this.print(`--${f.key} ${f.label}${f.default ? ` [${f.default}]` : ''}${f.options ? ' ' + f.options.map(o => o.value).join('|') : ''}`, 'muted')); }
       else if (name === 'select') { if (!task) throw new Error('No active selection.'); this.runtime.choose(task.id, args[0] ?? ''); }
       else if (name === 'cancel') { if (!task) throw new Error('No running task.'); this.runtime.cancel(task.id); }
       else if (name === 'stop') { if (!task) throw new Error('No running task.'); this.runtime.stop(task.id); }

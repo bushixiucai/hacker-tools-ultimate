@@ -12,4 +12,4 @@ npm run test:e2e
 npx playwright test -c playwright.mobile.config.ts
 ```
 
-The production application always includes all twelve tools and the twenty quick actions. There is no optional short-action build flag in v0.6. Legacy script content is not the active execution contract.
+The production application always includes all twelve tools and the twenty quick actions. There is no optional short-action build flag in v0.7. Legacy script content is not the active execution contract.

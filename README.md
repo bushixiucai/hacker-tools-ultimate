@@ -1,6 +1,6 @@
 # Hacker Toolbox
 
-A browser-based simulation toolkit with twelve independent workflows, realistic operational text, and an explicit final reveal. The original Matrix visual identity, top navigation, tool cards, and split terminal layout are preserved.
+A browser-based simulation toolkit with twelve independent automatic workflows, cinematic operational text, and a wild final reveal. The original Matrix visual identity, top navigation, tool cards, and split terminal layout are preserved.
 
 [Product requirements (Chinese)](PRD.md) · [Module authoring](docs/module-authoring.md) · [Live site](https://bushixiucai.github.io/hacker-tools-ultimate/)
 
@@ -10,7 +10,7 @@ Website takeover, port scanning, credential auditing, camera access, satellite t
 
 All scanning, authentication, device, filesystem, wireless, wallet, and traffic activity is generated inside the page. No real attack or device operation is performed. Only website preparation may attempt bounded, credential-free reads of public metadata when browser CORS permits it. It silently uses deterministic generated material otherwise. No proxy or metadata backend is used.
 
-Each tool owns its own runtime and recent reports. Switching tools keeps their work alive; a new run requires a new target. All run data is held in page memory and disappears on refresh. Theme and sound preferences are stored locally. No analytics or telemetry are included.
+The default path is one target and one launch: tools automatically select routes, gather samples, retry and connect. Optional parameters are collapsed; editors, video controls, phone apps and dashboard controls remain freely playable. Each tool owns its own runtime and recent reports. Switching tools keeps their work alive; a new run requires a new target. All run data is held in page memory and disappears on refresh. Theme and sound preferences are stored locally. No analytics or telemetry are included.
 
 ## Development
 
@@ -29,7 +29,7 @@ npx playwright test -c playwright.mobile.config.ts
 
 ## Sharing
 
-Reports export as PNG images or versioned, compressed URL-fragment links without a backend. Finite workflows replay their key decisions and results before revealing the simulation. Continuous tools share a frozen result and a short presentation. Replay never reads the original target again, and unavailable source imagery is replaced by bundled material.
+Reports export as PNG images or versioned, compressed URL-fragment links without a backend. Finite workflows replay their automatic stages and results before revealing the simulation. Continuous tools share a frozen result and a short presentation. Replay never reads the original target again, and unavailable source imagery is replaced by bundled material.
 
 ## Architecture
 
@@ -38,7 +38,7 @@ Reports export as PNG images or versioned, compressed URL-fragment links without
 - `app/src/workbench/`: terminal, specialized renderers, reports, quick checks, and responsive surfaces.
 - `app/public/media/`: offline footage, generated photos, world outline, and provenance notes.
 - `app/tests/`, `app/e2e/`, `app/e2e-gags/`: lifecycle, interaction, mobile, sharing, and boundary tests.
-- `scripts/`, `prototype/`, `docs/PRD*`: legacy content and prototypes retained for reference; the active application uses the v0.6 definitions.
+- `scripts/`, `prototype/`, `docs/PRD*`: legacy content and prototypes retained for reference; the active application uses the v0.7 definitions.
 
 A module is discovered through its definition; it does not require editing the application shell or task scheduler. Complex views register separately. Code comments and extension examples use English; product copy uses Chinese with technical English where appropriate.
 

@@ -26,13 +26,13 @@ const app = document.getElementById('app')!;
 const $ = (selector: string) => app.querySelector<HTMLElement>(selector)!;
 
 function showReveal(title: string, text: string) {
-  const dialog = document.getElementById('reveal-dialog') as HTMLDialogElement; document.getElementById('reveal-title')!.textContent = `${title} · 演示结束`; document.getElementById('reveal-text')!.textContent = text;
+  const dialog = document.getElementById('reveal-dialog') as HTMLDialogElement; document.getElementById('reveal-title')!.textContent = `${title} · 收工，放大招！`; document.getElementById('reveal-text')!.textContent = text;
   if (!dialog.open) dialog.showModal(); (dialog.querySelector('button') as HTMLButtonElement).focus(); sfx('reveal');
 }
 function finishTool() {
   if (!selected) return; const session = selected; const latest = session.runtime.state.tasks[session.runtime.state.tasks.length - 1]; if (latest) session.revealed.add(latest.id); session.runtime.end(); cleanupDetail?.(); cleanupDetail = undefined; detailKey = '';
   const task = session.runtime.state.tasks[session.runtime.state.tasks.length - 1]; if (task) session.revealed.add(task.id);
-  showReveal(session.module.name, '刚才的探测、会话、数据与操作结果均为本地演出，没有执行真实入侵、设备接管、文件加密或资金交易。网站公开资料仅用于构造背景。'); sync();
+  showReveal(session.module.name, `${session.module.reveal ?? '战果已封存。键盘可以降温了。'}\n\n刚才的探测、会话、数据和操作结果均为模拟，没有真实网站、设备、文件或资金受到操作。网站公开资料仅用于背景。`); sync();
 }
 function saveDraft() { if (!selected || !app.querySelector('#module-form')) return; const data = new FormData($('#module-form') as HTMLFormElement); selected.input = String(data.get('target') ?? ''); selected.draft = Object.fromEntries([...data.entries()].filter(([key]) => key !== 'target')) as Params; }
 function setPage(name: string) {
@@ -59,12 +59,12 @@ function renderForm() {
   const host = $('#module-fields'); host.replaceChildren(); $('#form-errors').replaceChildren(); if (!selected) return;
   const { module, draft } = selected;
   if (module.targetRequired !== false) { const input = el('input'); input.name = 'target'; input.setAttribute('aria-label', '目标'); input.placeholder = module.view === 'wallet' ? 'NVA-7F42A91C' : module.view === 'cms' ? '输入网站网址' : '输入目标名称、地址或代号'; input.value = selected.input; input.maxLength = 253; input.autocomplete = 'off'; input.required = true; host.append(fieldGroup('target', module.view === 'cms' ? '目标网址' : '目标', input)); }
-  const advanced = el('details', 'advanced-fields'); advanced.append(el('summary', '', '高级配置'));
+  const advanced = el('details', 'advanced-fields'); advanced.append(el('summary', '', '可选配置 · 不用改，直接开干'));
   for (const f of module.fields) {
     const input = f.type === 'select' ? el('select') : el('input'); input.name = f.key; input.required = !!f.required;
     if (input instanceof HTMLSelectElement) (f.options ?? []).forEach(o => input.add(new Option(o.label, o.value)));
     else { input.type = f.type === 'number' ? 'number' : 'text'; input.placeholder = f.placeholder ?? ''; input.autocomplete = 'off'; input.maxLength = 256; }
-    input.value = draft[f.key] ?? f.default ?? ''; const group = fieldGroup(f.key, f.label, input, f.help ?? ''); (f.advanced ? advanced : host).append(group);
+    input.value = draft[f.key] ?? f.default ?? ''; const group = fieldGroup(f.key, f.label, input, f.help ?? ''); advanced.append(group);
   }
   if (advanced.childElementCount > 1) host.append(advanced);
   $('#module-form').oninput = saveDraft;
@@ -89,7 +89,7 @@ function renderDetails() {
   const target = selected.runtime.activeTarget; const key = selected.module.id + ':' + (target?.id ?? '') + ':' + selected.runtime.state.ended; if (key === detailKey) return;
   cleanupDetail?.(); cleanupDetail = undefined; detailKey = key; const host = $('#module-detail'); host.replaceChildren();
   if (selected.runtime.state.ended) { host.append(el('p', 'detail-empty', '会话已结束，可导出报告或开始新一轮。')); return; }
-  if (!target) { host.append(el('p', 'detail-empty', '配置目标与参数后启动。运行期间可在其他工具间切换。')); return; }
+  if (!target) { host.append(el('p', 'detail-empty', '填上目标，一键开干。选路、采样、重试交给我，结果交给你玩。')); return; }
   const factory = selected.module.view ? EXTRA_VIEWS[selected.module.view] : undefined;
   if (factory) cleanupDetail = factory(host, target.id, selected.runtime);
   else if (selected.module.view) cleanupDetail = mountDetail(host, selected.module.view, target.id, selected.runtime);
@@ -105,7 +105,7 @@ function sync() {
   const { runtime, module } = selected; const task = runtime.state.tasks[runtime.state.tasks.length - 1];
   const choiceHost = $('#choice-panel'); const choiceKey = task?.choice ? `${task.id}:${task.choice.prompt}` : '';
   if (choiceHost.dataset.key !== choiceKey) { choiceHost.dataset.key = choiceKey; choiceHost.replaceChildren(); if (task?.choice) { choiceHost.append(el('h3', '', task.choice.prompt)); const row = el('div', 'choice-buttons'); task.choice.options.forEach(o => row.append(button(o.label, () => { try { runtime.choose(task.id, o.value); } catch (error) { selected?.shell.print(String(error), 'error'); } }))); choiceHost.append(row); } }
-  $('#task-status').textContent = task ? `${statuses[task.status]} · ${task.phase}` : '等待配置';
+  $('#task-status').textContent = task ? `${statuses[task.status]} · ${task.phase}` : '目标到位，立刻开干';
   ($('#task-progress') as HTMLProgressElement).value = task?.progress ?? 0;
   $('#task-result').textContent = task?.result ?? task?.error ?? '';
   const active = task?.status === 'running'; ($('#start-task') as HTMLButtonElement).disabled = !!active; ($('#new-run') as HTMLButtonElement).disabled = !!active;
@@ -114,7 +114,7 @@ function sync() {
   const history = $('#task-list'); const historyKey = runtime.state.tasks.slice(-5).map(t => `${t.id}${t.status}${t.progress.toFixed(0)}`).join();
   if (history.dataset.key !== historyKey) { history.dataset.key = historyKey; history.replaceChildren(); runtime.state.tasks.slice(-5).reverse().forEach(t => { const row = el('div', `task-row ${t.status}`); row.dataset.taskId = t.id; row.append(el('strong', '', t.targetInput || module.name), el('span', '', statuses[t.status]), el('small', '', t.result ?? t.error ?? t.phase), button('查看报告', () => showHistory(t, runtime))); history.append(row); }); }
   $('#history-count').textContent = String(runtime.state.tasks.length); renderDetails();
-  if (module.autoReveal && task && task.status !== 'running' && !selected.revealed.has(task.id) && pageName === 'terminal') { selected.revealed.add(task.id); showReveal(module.name, '警报已解除。刚才的文件、加密状态和倒计时均为页面演出，没有读取、加密或修改你的真实文件。'); }
+  if (module.autoReveal && task && task.status !== 'running' && !selected.revealed.has(task.id) && pageName === 'terminal') { selected.revealed.add(task.id); showReveal(module.name, `${module.reveal ?? '警报撤了，文件一根头发都没掉。'}\n\n所有警报、文件与倒计时均为模拟，没有读取、加密或修改你的真实文件。`); }
 }
 function showHistory(task: Task, runtime: Runtime) {
   const dialog = el('dialog', 'report-dialog'); const title = el('h2', '', task.title); const body = el('pre', '', `${task.targetInput ?? ''}\n${task.result ?? task.error ?? task.phase}\n\n${task.logs.join('\n')}`); dialog.append(title, body, button('关闭', () => { dialog.close(); dialog.remove(); }), el('p', 'modal-disclosure', '纯属娱乐，所有内容均为模拟')); dialog.addEventListener('close', () => dialog.remove(), { once: true }); document.body.append(dialog); dialog.showModal();
@@ -126,7 +126,7 @@ async function openReplay(payload: string) {
     host.replaceChildren(el('h2', '', report.title), el('p', '', report.target.domain), el('p', 'muted', report.kind === 'flow' ? '过程回放' : '成果报告'));
     const output = el('pre', 'replay-log'); const detail = el('div', 'replay-detail'); const controls = el('div', 'detail-actions'); host.append(output, controls, detail);
     const sequence = report.kind === 'flow' ? report.task.events?.filter(e => ['choice','phase','result','error'].includes(e.kind)).slice(-24).map(e => `${e.kind.toUpperCase()} ${e.value}`) ?? report.task.logs.slice(-12) : [report.task.phase, report.task.result ?? '当前状态报告']; let index = 0; let timer: ReturnType<typeof setInterval> | undefined; let revealTimer: ReturnType<typeof setTimeout> | undefined;
-    const reveal = () => { if (timer) clearInterval(timer); replayCleanup?.(); replayCleanup = undefined; showReveal(report.title, '本报告中的探测、状态、数据与修改均为娱乐演出，不代表真实网站、设备或资产发生变化。'); };
+    const reveal = () => { if (timer) clearInterval(timer); replayCleanup?.(); replayCleanup = undefined; showReveal(report.title, `${module.reveal ?? '回放收官，键盘封神。'}\n\n报告中的探测、状态、数据与修改均为模拟，真实网站、设备和资产没有变化。`); };
     const showResult = () => {
       if (detail.childElementCount) return;
       detail.append(el('h3', '', '结果摘要'), el('p', '', report.task.result ?? report.task.error ?? report.task.phase));
@@ -149,9 +149,9 @@ function route() {
 }
 function bootstrap() {
   app.innerHTML = `<header class="classic-header"><h1 class="glitch" aria-label="黑客工具箱" data-text="黑客工具箱">黑客工具箱</h1><nav class="sub" aria-label="主导航"><button id="home-button">首页</button><button id="terminal-button">终端</button><button id="about-button">关于</button><button id="open-disclaimer">声明</button><button id="fs-btn">⛶ 全屏</button><button data-theme="matrix">绿</button><button data-theme="cyber">紫</button><button data-theme="alert">红</button><button id="sound-btn">音效</button></nav></header>
-  <main><section id="home-page"><div class="hero"><h2>安全研究与系统分析工具集</h2><p>目标识别 · 服务探测 · 会话分析 · 态势监测</p><p class="muted">选择工具，配置目标与参数，检查执行结果。</p></div><div id="cards"></div><section class="quick-section"><h2>快速操作</h2><div id="quick-actions"></div></section></section>
-  <section id="terminal-page" class="hidden"><div class="tool-heading"><h2 id="tool-title">交互式终端</h2><span id="running-note"></span><button id="new-run">新一轮</button><button id="end-tool">结束演示</button></div><p id="tool-description">选择工具以建立会话。</p><div class="classic-grid"><section class="terminal-column"><div id="shell-slot"><div class="panel detail-empty">选择下方工具开始。</div></div><div id="module-nav" class="quick"></div><details class="task-section"><summary>最近记录 <span id="history-count">0</span></summary><div id="task-list"></div></details></section><section class="operation-column"><section class="panel configuration"><div class="panel-heading">任务配置</div><form id="module-form" novalidate><div id="module-fields"></div><div id="form-errors" role="alert"></div><div class="detail-actions"><button id="start-task" type="submit">启动任务</button><button id="stop-task" type="button" class="hidden">中断任务</button></div></form><p id="task-status">等待配置</p><progress id="task-progress" max="100" value="0" aria-label="任务进度"></progress><p id="task-result" role="status"></p><div id="choice-panel"></div></section><section id="module-detail" class="panel detail"><div class="idle-map"></div></section><section class="panel share-actions"><button id="share-image">导出战报图片</button><button id="share-link">生成回放链接</button><div id="share-output" role="status"></div></section></section></div></section>
-  <section id="about-page" class="hidden panel guide"><h2>操作说明</h2><p>选择工具后输入目标与参数，按执行反馈作出选择。运行期间可切换工具，返回后恢复当前会话。新一轮需要重新输入目标，各工具的记录与状态独立。</p><p>终端输入 help 查看命令，select 选择当前分支，Ctrl+C 中断。持续任务可暂停、恢复或停止；结果可以导出图片或生成回放链接。</p><h2>产品声明</h2><p>纯属娱乐，所有内容均为模拟。工具不会执行真实入侵、设备接管、文件加密或资金交易。网站工具可尝试读取公开资料用作背景，无法取得的内容由页面生成。</p><p>目标与报告仅保留在当前页面会话；刷新清空。主题与音效偏好只保存在本机。</p><button id="reset-settings">清除本地设置</button><p id="reset-msg"></p><p class="muted">创意参考 GodOfHacker，界面与流程独立实现。</p></section>
+  <main><section id="home-page"><div class="hero"><h2>给个目标。剩下的，交给我。</h2><p>自动选路 · 链路接管 · 全域追踪 · 高压监测</p><p class="muted">挑个工具，甩个目标。一路自动推进，战果直接上桌。</p></div><div id="cards"></div><section class="quick-section"><h2>快速操作</h2><div id="quick-actions"></div></section></section>
+  <section id="terminal-page" class="hidden"><div class="tool-heading"><h2 id="tool-title">交互式终端</h2><span id="running-note"></span><button id="new-run">新一轮</button><button id="end-tool">收工揭晓</button></div><p id="tool-description">选择工具以建立会话。</p><div class="classic-grid"><section class="terminal-column"><div id="shell-slot"><div class="panel detail-empty">选好工具，准备开干。</div></div><div id="module-nav" class="quick"></div><details class="task-section"><summary>最近记录 <span id="history-count">0</span></summary><div id="task-list"></div></details></section><section class="operation-column"><section class="panel configuration"><div class="panel-heading">行动起点</div><form id="module-form" novalidate><div id="module-fields"></div><div id="form-errors" role="alert"></div><div class="detail-actions"><button id="start-task" type="submit">一键开干</button><button id="stop-task" type="button" class="hidden">中断任务</button></div></form><p id="task-status">目标一到，立刻起飞</p><progress id="task-progress" max="100" value="0" aria-label="任务进度"></progress><p id="task-result" role="status"></p><div id="choice-panel"></div></section><section id="module-detail" class="panel detail"><div class="idle-map"></div></section><section class="panel share-actions"><button id="share-image">导出战报图片</button><button id="share-link">生成回放链接</button><div id="share-output" role="status"></div></section></section></div></section>
+  <section id="about-page" class="hidden panel guide"><h2>操作说明</h2><p>选工具、填目标、开干。入口、信号、频道、候选和重试全部自动处理；接通后你只管改后台、转云台、玩手机。可选配置不改也能跑，切换工具各自继续。</p><p>终端输入 help 查装备，run 带目标直接开干，Ctrl+C 随时刹车。持续任务可暂停、恢复和停止，结果可导出战报图片或生成回放链接。</p><h2>产品声明</h2><p>纯属娱乐，所有内容均为模拟。工具不会执行真实入侵、设备接管、文件加密或资金交易。网站工具可尝试读取公开资料用作背景，无法取得的内容由页面生成。</p><p>目标与报告仅保留在当前页面会话；刷新清空。主题与音效偏好只保存在本机。</p><button id="reset-settings">清除本地设置</button><p id="reset-msg"></p><p class="muted">创意参考 GodOfHacker，界面与流程独立实现。</p></section>
   <section id="replay-page" class="hidden panel"><div id="replay-content"></div></section></main>`;
   MODULES.forEach(module => { const card = button('', () => openTool(module.id), 'card'); card.dataset.module = module.id; card.append(el('strong','card-title',module.name),el('span','card-tool',module.description),el('span','card-cmd',`$ ${module.code}`)); $('#cards').append(card); const quick = button(module.name, () => openTool(module.id)); quick.dataset.module = module.id; $('#module-nav').append(quick); });
   mountQuickActions($('#quick-actions'), showReveal);

@@ -1,6 +1,6 @@
 # Adding an independent tool
 
-[PRD v0.6](../PRD.md) is the product contract. Tools share technical components, never credentials, prerequisite results or mutable sessions. The application preserves its original header, home cards, themes and two-column terminal; adding a tool does not introduce a global workbench.
+[PRD v0.7](../PRD.md) is the product contract. Tools share technical components, never credentials, prerequisite results or mutable sessions. The application preserves its original header, home cards, themes and two-column terminal; adding a tool does not introduce a global workbench.
 
 ## Register a definition
 
@@ -20,9 +20,8 @@ const definition: ModuleDefinition = {
   },
   async execute(ctx, params) {
     ctx.phase('Preparing inventory', 15);
-    const scope = await ctx.choose('Select inventory scope', [
-      { value: 'all', label: 'All services' }, { value: 'web', label: 'Web services' },
-    ]);
+    const scope = 'all';
+    ctx.log('AUTO ROUTE / collecting all service records');
     await ctx.wait(300);
     const services = ctx.target.services.filter(service => scope === 'all' || [80, 443].includes(service.port));
     const report = params.format === 'json' ? JSON.stringify(services, null, 2)
@@ -45,17 +44,17 @@ The application owns one `new Runtime([definition])` per tool. Use `startRun(mod
 
 Every run creates a fresh target with a unique run ID, deterministic base profile, empty `data` and unmodified business records. The same normalized input yields the same base seed, not a reused mutable target. `Target.data` contains tool-specific state; type that state in the tool implementation. `files` contains only local virtual report text. Neither storage area is shared with another tool. Do not restore a cross-tool resource or credential chain.
 
-The target is required by default. Set `targetRequired: false` for scene-only tools. Optional `continuous`, `autoReveal`, `order` and `view` describe tool behavior. Fields support text, number, select, defaults, descriptions, required flags and `advanced: true` for collapsed advanced configuration. Parameter controls and shell `run <target> --format=json` call the same execution path. Each new run requires a new target entry; the latest five runs and their matching targets are retained as session-only inspection records. Logs retain the latest 1,000 lines, with `task.logOffset` counting discarded lines; shell subscribers use absolute offsets. Replay events retain the latest 500 entries. Continuous tools must also bound their own sample arrays.
+The target is required by default. Set `targetRequired: false` for scene-only tools. Optional `continuous`, `autoReveal`, `order`, `view` and `reveal` describe tool behavior and the tool-specific ending. Product copy uses a confident cinematic voice during execution and a wild final reveal; the shell appends the explicit simulation disclosure. Fields support text, number, select, defaults, descriptions, required flags and `advanced: true` for compatibility; the application now collapses all non-target fields as optional configuration. Parameter controls and shell `run <target> --format=json` call the same execution path. Each new run requires a new target entry; the latest five runs and their matching targets are retained as session-only inspection records. Logs retain the latest 1,000 lines, with `task.logOffset` counting discarded lines; shell subscribers use absolute offsets. Replay events retain the latest 500 entries. Continuous tools must also bound their own sample arrays.
 
 ## Execution and lifecycle
 
-The context exposes `target`, `task`, `signal`, `log`, `phase`, `wait`, `changed` and `choose`. `wait` and `choose` reject on cancellation. `runtime.choose(taskId, value)` accepts only currently available options; choice events are captured for reports and replay. Always await the choice instead of polling DOM state.
+The context exposes `target`, `task`, `signal`, `log`, `phase`, `wait`, `changed` and `choose`. `wait` and `choose` reject on cancellation. `runtime.choose(taskId, value)` accepts only currently available options; choice events are captured for reports and replay. These extension APIs remain available, but built-in tools must not call `choose`: automatically select routes and retry within bounded phases. Input once and launch once must reach the playable result without an intermediate click.
 
 Use `ctx.wait` rather than unmanaged timers. Check the abort signal after asynchronous dependencies before mutating state. Calling `changed`, `log` or `phase` after cancellation throws; cleanup in `finally` may restore local state directly, and only publishes through `changed` when the signal is not aborted.
 
 Continuous executors implement their own state loop, pause behavior and graceful stop. The generic `runtime.stop(taskId)` sets `target.data.stop = true`; a view may also use a typed tool-owned stop flag. `cancel` aborts immediately; `end` cancels only this runtime. No module IDs belong in the generic runtime cleanup path. Restore transient state in `finally` for success, failure and abort.
 
-Switching tools disposes visible resources, not the running executor. Returning mounts the view from retained state. Video, animation, event handlers and timers created by a view must be released by its disposer. Explicitly ending a tool releases execution resources and reveals the ending. Ransom is the documented automatic-ending exception.
+Switching tools disposes visible resources, not the running executor. Returning mounts the view from retained state. Video, animation, event handlers and timers created by a view must be released by its disposer. Explicitly ending a tool releases execution resources and reveals the ending. Ransom and short quick actions are the documented automatic-ending exceptions. A CMS renderer may automatically open its ready result once while visible; a background completion must not steal the current tool.
 
 ## Specialized views
 
